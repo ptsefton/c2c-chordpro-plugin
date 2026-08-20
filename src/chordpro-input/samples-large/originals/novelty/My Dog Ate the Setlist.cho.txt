@@ -1,0 +1,21 @@
+{title: My Dog Ate the Setlist}
+{artist: The Verandah Rattlers}
+{key: C}
+
+{comment: Verse 1}
+[C]Walked in for soundcheck, [F]clipboard in my [C]hand
+[G]Turned around one second, [C]best-laid plans
+[C]Found him in the [F]corner, guilty little [C]grin
+[G]Half a page of [C]setlist stuck to his [G]chin
+
+{comment: Chorus}
+[F]My dog ate the [C]setlist
+[F]Reckon it's ex[G]tinct
+[C]Guess we're playing [F]whatever we re[C]member
+[G]My dog ate the [C]setlist, that's [G]the gig to[C]night
+
+{comment: Verse 2}
+[C]Told the crowd "we're [F]winging it, [C]folks"
+[G]Dog looked pretty [C]pleased with his own [G]jokes
+[C]Turns out he's got [F]better taste than [C]me
+[G]Every song he [C]left us was a [G]hit, you [C]see

@@ -1,0 +1,21 @@
+{title: Paper Boats}
+{artist: The Verandah Rattlers}
+{key: C}
+
+{comment: Verse 1}
+[C]We folded paper [F]boats after the [C]rain
+[Am]Sent them down the [F]gutter, again and [G]again
+[C]Yours always [F]sank by the [C]second drain
+[Am]Mine made it to the [F]corner, I'd [G]brag and [C]explain
+
+{comment: Chorus}
+[F]Paper boats, [C]paper boats
+[F]Carrying every[G]thing we [C]wrote
+[Am]Wishes and [F]secrets we were [C]too young to [Am]keep
+[F]Paper boats [G]sailing off to [C]sleep
+
+{comment: Verse 2}
+[C]Thirty years on and the [F]gutters still [C]run
+[Am]I drove past our [F]street just to see if we'd [G]won
+[C]No boats left [F]floating, the [C]rain's long since [Am]dried
+[F]But I still hear [G]us laughing on the [C]other [G]side

@@ -1,0 +1,21 @@
+{title: The Long Paddock}
+{composer: Deb Kowalski}
+{key: D}
+
+{comment: Verse 1}
+[D]Droving down the long paddock, [G]dust behind the mob
+[D]Nothing but the road ahead and [A]sky enough to rob
+[D]A man could lose himself out here, [G]a man could find his name
+[D]Walking down the long paddock, [A]never twice the [D]same
+
+{comment: Chorus}
+[G]The long paddock, no fences [D]in sight
+[G]The long paddock, [A]stars for a [D]light
+[G]Take what the land gives, give the land its [D]due
+[G]Long paddock's the [A]only home I [D]knew
+
+{comment: Verse 2}
+[D]Grandad walked it, so did his [G]father before
+[D]I'll walk it too, [A]same as the drovers of yore
+[D]Someday my own boy will walk this [G]same old track
+[D]Long paddock don't care whose [A]boots are walking [D]back

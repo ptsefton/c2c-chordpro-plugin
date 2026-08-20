@@ -1,0 +1,21 @@
+{
+  "name": "c2c-chordpro-plugin",
+  "version": "0.1.0",
+  "description": "chaos2crate input-mode plugin: harvest ChordPro song charts and Markdown setlists into an RO-Crate songbook.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "generate:chordprobook-bundle": "node scripts/bundle-chordprobook-for-browser.mjs",
+    "fix:st-directive": "node scripts/fix-st-directive.mjs",
+    "build:songbook": "node src/chordpro-input/build-songbook.mjs"
+  },
+  "dependencies": {
+    "chordprobook": "file:../chordprobook",
+    "jszip": "^3.10.1",
+    "ro-crate": "^3.7.2"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
+  }
+}

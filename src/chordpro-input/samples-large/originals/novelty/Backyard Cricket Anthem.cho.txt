@@ -1,0 +1,21 @@
+{title: Backyard Cricket Anthem}
+{artist: The Verandah Rattlers}
+{key: D}
+
+{comment: Verse 1}
+[D]Over the fence is [G]six and out
+[D]Hit the Hills Hoist, that's [A]out, no doubt
+[D]Tip and run if there's [G]only two
+[D]Dad's still bowling underarm, [A]that's the rule[D]s
+
+{comment: Chorus}
+[G]Backyard cricket, [D]backyard law
+[G]Backyard cricket, [A]never seen before
+[D]Made up on the [G]spot and argued to the [D]end
+[G]Backyard cricket [A]anthem, my old [D]friend
+
+{comment: Verse 2}
+[D]The dog's fielding, [G]doesn't give it back
+[D]Grandma's the umpire, [A]cold hard fact
+[D]Nobody agrees but [G]everybody plays
+[D]Backyard cricket [A]anthem, [D]all our summer [D]days

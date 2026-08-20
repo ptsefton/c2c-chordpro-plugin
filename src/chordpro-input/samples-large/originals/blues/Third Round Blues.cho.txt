@@ -1,0 +1,15 @@
+{title: Third Round Blues}
+{artist: The Verandah Rattlers}
+{key: G}
+
+{comment: Verse 1}
+[G]Question one was easy, question [C]two was fine
+[G]Question three's the reason we're [D]always out of time
+[G]"Name the state capitals" — [C]we got four of eight
+[G]Third round blues, [D]sealed our [G]fate
+
+{comment: Chorus}
+[C]Last place again, [G]same as every week
+[C]Last place again, [D]it's not looking [G]bleak
+[C]We came for the [G]schnitzels, not the [D]trophy anyway
+[G]Third round blues, [C]we'll be back [D]Tuesday

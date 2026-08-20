@@ -1,0 +1,16 @@
+{title: Harbour Lights (Reprise)}
+{artist: The Verandah Rattlers}
+{subtitle: for the ones still waving from the jetty}
+{key: G}
+
+{comment: Verse 1}
+[G]One more look at the [Em]harbour lights
+[C]Fading small behind the [D]ferry's wake
+[G]One more song for the [Em]longest nights
+[C]One more promise I'm [D]bound to [G]break
+
+{comment: Chorus}
+[C]Harbour lights, don't go [G]dark on me yet
+[C]Harbour lights, [D]I'm not done [G]leaving
+[Em]Every time I [C]sail I swear I [D]won't forget
+[G]The harbour [C]lights I keep [D]believing [G]

@@ -1,0 +1,21 @@
+{title: Ute Full of Trouble}
+{artist: The Verandah Rattlers}
+{key: E}
+
+{comment: Verse 1}
+[E]Got a tray full of trouble and a tank full of [A]hope
+[E]A dog in the back and a busted [B]speedo rope
+[E]Left before sunrise, didn't leave a [A]note
+[E]Just a ute full of trouble and a [B]one-way [E]road
+
+{comment: Chorus}
+[A]Trouble, trouble, rattling round
+[E]Trouble, trouble, town to [B]town
+[A]Wherever I go, well, it seems to [E]follow
+[B]Ute full of trouble, tomorrow's [E]hollow
+
+{comment: Verse 2}
+[E]Mechanics all know me, they call me by [A]name
+[E]"Back again, mate? Well, it's always the [B]same"
+[E]I said "keep the change, keep the whole [A]tin"
+[E]Long as she starts, I don't care what's [B]within[E]

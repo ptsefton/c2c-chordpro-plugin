@@ -1,0 +1,21 @@
+{title: Diesel and Moonlight}
+{artist: The Verandah Rattlers}
+{key: D}
+
+{comment: Verse 1}
+[D]Running on diesel and [G]moonlight
+[D]Radio crackling some [A]far-off station
+[D]Nothing but white lines and [G]moonlight
+[D]All the way [A]home to [D]nowhere
+
+{comment: Verse 2}
+[D]Passed through a town that was [G]sleeping
+[D]One dog barking, one light [A]on
+[D]Kept on driving, kept on [G]dreaming
+[D]Diesel and moonlight, [A]carry me [D]on
+
+{comment: Chorus}
+[G]Carry me on, carry me [D]far
+[G]Nothing behind me but a [A]cracked rear-view star
+[D]Diesel and moonlight, [G]that's all I [D]own
+[G]Carry me, carry me [A]home[D]

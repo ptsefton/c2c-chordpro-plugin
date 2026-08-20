@@ -1,0 +1,22 @@
+{title: Weathervane Waltz}
+{artist: The Verandah Rattlers}
+{key: F}
+{time: 3/4}
+
+{comment: Verse 1}
+[F]Round and a[Bb]round goes the [F]weathervane [C]spinning
+[F]North to the [Bb]south to wherever the [C]wind's [F]blowing
+[F]Round and a[Bb]round goes my [F]heart, never [C]landing
+[F]Can't seem to [Bb]settle on [C]one way of [F]going
+
+{comment: Chorus}
+[Bb]Spin me a [F]little slower [C]now
+[Bb]Point me some[F]where, [C]any[F]how
+[Bb]I'm tired of [F]turning with every [C]breeze
+[Bb]Weathervane [F]heart, won't you [C]rest, [F]please
+
+{comment: Verse 2}
+[F]Maybe I'll [Bb]rust into [F]facing you [C]only
+[F]Maybe the [Bb]wind will just [C]finally [F]agree
+[F]Round and a[Bb]round 'til the [F]turning slows [C]lonely
+[F]Weathervane [Bb]waltzing, [C]just you and [F]me

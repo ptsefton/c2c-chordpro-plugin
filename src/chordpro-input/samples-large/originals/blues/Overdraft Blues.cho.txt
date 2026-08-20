@@ -1,0 +1,21 @@
+{title: Overdraft Blues}
+{artist: The Verandah Rattlers}
+{key: E}
+
+{comment: Verse 1}
+[E]Woke up this morning, checked my [A]phone
+[E]Bank app told me I'm on my [B]own
+[E]Overdraft blues, sitting on my [A]chest
+[E]Overdraft blues, [B]never get a [E]rest
+
+{comment: Verse 2}
+[E]Rang up the bank, said "mate, what can I [A]do"
+[E]They said "have you tried not spending, [B]too"
+[E]Overdraft blues, laughing at my [A]face
+[E]Overdraft blues, [B]know my [E]place
+
+{comment: Chorus}
+[A]Nothing in the tin, nothing in the [E]jar
+[A]Nothing but the blues and a [B]beat-up guitar
+[E]But I'll [A]sing 'em anyway, sing 'em [B]loud and [E]true
+[A]Ain't got a [B]cent but I've still [E]got the blues

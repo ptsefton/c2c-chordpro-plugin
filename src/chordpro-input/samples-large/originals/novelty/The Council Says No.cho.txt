@@ -1,0 +1,21 @@
+{title: The Council Says No}
+{artist: The Verandah Rattlers}
+{key: C}
+
+{comment: Verse 1}
+[C]Wanted a pool, [F]council says [C]no
+[G]Wanted a fence, [C]council says [G]no
+[C]Wanted a shed [F]just a metre too [C]tall
+[G]Council says no, [C]council says [G]no to it [C]all
+
+{comment: Chorus}
+[F]The council says no, in [C]triplicate too
+[F]The council says no, there's [G]nothing to [C]do
+[F]Fill out the form, then [C]fill out the [G]next
+[F]The council says no — [C]that's the whole [G]text
+
+{comment: Verse 2}
+[C]Asked for a permit to [F]busk on the [C]street
+[G]Council said "sure" — [C]first time we've [G]beat 'em
+[C]Guess even council's [F]got a soft [C]spot somewhere
+[G]For a band that [C]just wants to [G]play [C]out there

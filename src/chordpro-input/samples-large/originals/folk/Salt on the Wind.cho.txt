@@ -1,0 +1,21 @@
+{title: Salt on the Wind}
+{artist: The Verandah Rattlers}
+{key: E}
+
+{comment: Verse 1}
+[E]Grew up with salt on the [A]wind and sand in my [B]shoes
+[E]Jetty planks creaking out the [A]same old news
+[E]Left for the city 'cause the [A]city seemed to [B]call
+[E]Turns out I miss the salt [A]most of [B]all
+
+{comment: Chorus}
+[A]Salt on the wind, salt in my [E]hair
+[A]Salt on the wind, [B]I don't care
+[E]If the tide comes [A]in and takes this town [B]away
+[E]I'll still taste the [A]salt on the [B]wind [E]today
+
+{comment: Verse 2}
+[E]Postcards on the fridge of a [A]place I used to [B]know
+[E]Every one says "wish you [A]were here", and it's [B]so
+[E]Someday I'll go back and [A]let the salt sink [B]in
+[E]Let it wash away [A]everywhere I've [B]been[E]

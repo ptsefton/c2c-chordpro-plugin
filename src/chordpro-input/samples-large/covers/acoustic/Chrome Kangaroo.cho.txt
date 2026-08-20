@@ -1,0 +1,18 @@
+{title: Chrome Kangaroo}
+{artist: The Verandah Rattlers}
+{subtitle: unplugged arrangement}
+{key: A}
+
+{comment: Slowed right down for the acoustic set — half the tempo, twice the sentiment}
+
+{comment: Verse 1}
+[A]She's got a dint in the door and a mind of her [D]own [A]
+[A]Nowadays she just sits there, [D]rusting in the [A]sun
+[A]Kids don't know the stories a [D]ute like her could [A]tell
+[E]But I still hear the [A]engine when I [E]listen [A]well
+
+{comment: Chorus, half time}
+[D]Chrome Kangaroo, chrome Kangaroo
+[A]Older now, but so am [E]I too
+[D]Nothing on this driveway's going [A]anywhere [E]new
+[A]Chrome Kangaroo[E], [A]still love [D]you[A]

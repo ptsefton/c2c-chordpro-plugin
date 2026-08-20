@@ -1,0 +1,30 @@
+{title: Overdraft Blues}
+{artist: The Verandah Rattlers}
+{subtitle: live at the Imperial, extended jam}
+{key: E}
+
+{comment: Recorded live — the crowd shouts the last "blues" every time}
+
+{comment: Verse 1}
+[E]Woke up this morning, checked my [A]phone
+[E]Bank app told me I'm on my [B]own
+[E]Overdraft blues, sitting on my [A]chest
+[E]Overdraft blues, [B]never get a [E]rest
+
+{comment: Verse 2}
+[E]Rang up the bank, said "mate, what can I [A]do"
+[E]They said "have you tried not spending, [B]too"
+[E]Overdraft blues, laughing at my [A]face
+[E]Overdraft blues, [B]know my [E]place
+
+{comment: Extended jam - guitar solo, twelve bars, repeat chorus twice more}
+[A7]/// [A7]/// [E7]/// [E7]///
+[B7]/// [A7]/// [E7]/// [B7]///
+
+{comment: Chorus}
+[A]Nothing in the tin, nothing in the [E]jar
+[A]Nothing but the blues and a [B]beat-up guitar
+[E]But I'll [A]sing 'em anyway, sing 'em [B]loud and [E]true
+[A]Ain't got a [B]cent but I've still [E]got the blues
+
+{comment: Crowd shouts "BLUES!" here, every night}

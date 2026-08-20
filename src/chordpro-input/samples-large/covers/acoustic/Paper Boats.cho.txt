@@ -1,0 +1,19 @@
+{title: Paper Boats}
+{artist: The Verandah Rattlers}
+{subtitle: unplugged arrangement}
+{key: C}
+{capo: 0}
+
+{comment: Stripped back — just one guitar, sung slower than the album version}
+
+{comment: Verse 1}
+[C]We folded paper [F]boats after the [C]rain
+[Am]Sent them down the [F]gutter, [G]slow this [C]time
+[C]No band behind [F]this one, just [C]one guitar
+[Am]And every word [F]exactly where we [G]are
+
+{comment: Chorus}
+[F]Paper boats, [C]paper boats
+[F]Carrying every[G]thing we [C]wrote
+[Am]No drums to [F]hide behind, no bass to [C]lean [Am]on
+[F]Just paper boats, [G]and then they're [C]gone

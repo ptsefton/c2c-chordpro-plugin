@@ -1,0 +1,21 @@
+{title: Vegemite on Toast}
+{artist: The Verandah Rattlers}
+{key: G}
+
+{comment: Verse 1}
+[G]Woke up broke, woke up [C]blue
+[G]Fridge had nothing much to [D]do
+[G]Found a loaf and found a [C]jar
+[G]That's a breakfast fit for a [D]rock and roll [G]star
+
+{comment: Chorus}
+[C]Vegemite on [G]toast, that's my whole [D]diet
+[C]Vegemite on [G]toast, [D]won't even try [G]it
+[C]Any other [G]way, black and [D]salty, spread it [G]thin
+[C]Vegemite on [G]toast, [D]let the day be[G]gin
+
+{comment: Verse 2}
+[G]Toured the world, ate [C]fancy things
+[G]Nothing like the [D]breakfast that a [G]servo [C]sells
+[G]Come back home, first [C]thing that I do
+[G]Vegemite on [D]toast, just me and [G]you

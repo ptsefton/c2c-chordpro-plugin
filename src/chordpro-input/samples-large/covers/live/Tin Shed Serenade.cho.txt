@@ -1,0 +1,27 @@
+{title: Tin Shed Serenade}
+{artist: The Verandah Rattlers}
+{subtitle: live at the Imperial, with a false start}
+{key: C}
+
+{comment: Live recording — count-in left in on purpose, band restarts after a string breaks}
+
+{comment: False start}
+[C]Meet me down the— [Am]hang on, string's [G]gone, gimme a [C]sec
+
+{comment: Verse 1, restarted}
+[C]Meet me down the [F]tin shed after [C]dark
+[Am]Bring your old guitar, I'll bring a [G]spark
+[C]We'll sit among the [F]tools and the [C]hay
+[Am]Sing the kind of songs you don't [G]sing by [C]day
+
+{comment: Chorus, crowd singing along by now}
+[F]Tin shed serenade, [C]rain on the roof
+[F]Tin shed serenade, [G]that's all the proof
+[C]I need that this is [F]love, not just a [C]phase
+[Am]Singing you a [G]tin shed sere[C]nade
+
+{comment: Extra verse, only ever played live}
+[C]One night the roof [F]leaked right on the [C]drummer
+[Am]Didn't miss a beat, [G]didn't miss a [C]summer
+[C]That's the tin shed [F]way, that's the tin shed [C]creed
+[Am]Keep on playing, [G]that's all we [C]need

@@ -1,0 +1,14 @@
+{title: Paper Boats}
+{composer: Deb Kowalski}
+{subtitle: four-track demo, before the second verse existed}
+{key: C}
+
+{comment: The very first demo — one verse, no chorus yet, recorded onto an actual cassette}
+
+{comment: Verse 1, early draft lyrics}
+[C]We made little [F]boats out of [C]homework we hated
+[Am]Sent them down the [F]drain, never [G]waited
+[C]Yours went under, [F]mine went [C]far
+[Am]Kid stuff, but I still know [F]where we [G]are
+
+{comment: Working title was "Gutter Boats" — changed before the album}

@@ -1,0 +1,21 @@
+{title: Paddock Full of Stars}
+{artist: The Verandah Rattlers}
+{key: G}
+
+{comment: Verse 1}
+[G]Lying in the [C]paddock, grass gone [G]cold
+[Em]Counting satellites, [D]not doing what I'm [G]told
+[G]Mum's calling out but the [C]sky's too [G]loud
+[Em]Full of stars tonight, [D]not a single [G]cloud
+
+{comment: Chorus}
+[C]A paddock full of [G]stars
+[C]Closer than they [D]are
+[G]I could reach up and [C]pick one for a [G]jar
+[Em]Take it home and [D]keep it where you [G]are
+
+{comment: Verse 2}
+[G]Dad says it's the [C]same sky that his [G]dad saw
+[Em]Same old Southern [D]Cross above the [G]shearing shed door
+[G]One day I'll go and [C]see the world out [G]there
+[Em]But I'll bring home a [D]paddock full of [G]stars

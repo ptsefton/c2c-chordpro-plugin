@@ -1,0 +1,21 @@
+{title: Slow Dance in the Servo}
+{artist: The Verandah Rattlers}
+{key: D}
+
+{comment: Verse 1}
+[D]Car broke down at [G]midnight, out of [D]gas and out of [A]luck
+[D]Servo radio [G]playing something [D]slow and [A]stuck
+[D]You held out your [G]hand under the [D]buzzing [A]light
+[D]Said "may I have this [G]dance" like it was [A]any old [D]night
+
+{comment: Chorus}
+[G]Slow dance in the [D]servo, [A]nowhere left to [D]be
+[G]Slow dance in the [D]servo, [A]just you and [D]me
+[G]Forget the tow truck, [D]forget the [A]time
+[G]Slow dance in the [D]servo, [A]you're still [D]mine
+
+{comment: Verse 2}
+[D]Tow truck came at [G]one, we didn't [D]even [A]care
+[D]Kept on dancing [G]slow among the [D]diesel and the [A]glare
+[D]Twenty years since, we [G]still stop there some [D]nights [A]
+[D]Just to dance beneath [G]that same old [A]buzzing [D]light

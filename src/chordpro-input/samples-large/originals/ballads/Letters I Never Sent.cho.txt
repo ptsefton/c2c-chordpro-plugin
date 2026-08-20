@@ -1,0 +1,21 @@
+{title: Letters I Never Sent}
+{artist: The Verandah Rattlers}
+{key: Am}
+
+{comment: Verse 1}
+[Am]There's a shoebox in the [F]wardrobe full of [C]words I never [G]said
+[Am]Every letter [F]started fine and [C]ended in my [G]head
+[Am]I'd write "I'm sorry" [F]twenty ways and [C]never send a [G]one
+[Am]Some things get [F]easier to [C]carry than to [G]own
+
+{comment: Chorus}
+[F]Letters I never [C]sent, still sitting in the [G]dark
+[F]Letters I never [C]sent, [Am]waiting for a [G]spark
+[F]Maybe I'll [C]burn them, maybe I'll [G]post them yet
+[F]Letters I [C]never [G]sent [Am]
+
+{comment: Verse 2}
+[Am]Found your new address, [F]wrote it on the [C]very last [G]page
+[Am]Didn't get much [F]further than your [C]name and your [G]age
+[Am]Guess this song's the [F]closest that I'll ever [C]get
+[Am]To sending you the [F]letters I never [C]sent [G]

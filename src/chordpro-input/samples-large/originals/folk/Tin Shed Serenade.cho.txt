@@ -1,0 +1,21 @@
+{title: Tin Shed Serenade}
+{artist: The Verandah Rattlers}
+{key: C}
+
+{comment: Verse 1}
+[C]Meet me down the [F]tin shed after [C]dark
+[Am]Bring your old guitar, I'll bring a [G]spark
+[C]We'll sit among the [F]tools and the [C]hay
+[Am]Sing the kind of songs you don't [G]sing by [C]day
+
+{comment: Chorus}
+[F]Tin shed serenade, [C]rain on the roof
+[F]Tin shed serenade, [G]that's all the proof
+[C]I need that this is [F]love, not just a [C]phase
+[Am]Singing you a [G]tin shed sere[C]nade
+
+{comment: Verse 2}
+[C]Doesn't need to be [F]fancy, doesn't need a [C]stage
+[Am]Just corrugated iron and a [G]second-hand cage
+[C]Full of borrowed [F]chords and a [C]borrowed heart
+[Am]This tin shed's [G]where our love got its [C]start

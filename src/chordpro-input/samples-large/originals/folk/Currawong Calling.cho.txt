@@ -1,0 +1,21 @@
+{title: Currawong Calling}
+{artist: The Verandah Rattlers}
+{key: Am}
+
+{comment: Verse 1}
+[Am]City lights don't sound like [G]anything I know
+[F]Miss the currawong calling [C]out before the sun's [G]glow
+[Am]Traffic where the magpies [G]used to sing
+[F]Wish I heard a [C]currawong [G]calling
+
+{comment: Chorus}
+[F]Currawong calling, [C]carry me [G]back
+[F]Currawong calling, [C]down the same old [G]track
+[Am]To the house with the [G]tank stand and the [F]tin
+[Am]Where a [G]currawong's [C]calling me [G]in
+
+{comment: Verse 2}
+[Am]One day I'll pack the [G]car up, point it home
+[F]Let the currawongs [C]tell me I'm not [G]alone
+[Am]Til then I'll hum their [G]song under my [F]breath
+[Am]A currawong calling's [G]as close as I [C]get

@@ -1,0 +1,21 @@
+{title: Flat Tyre Shuffle}
+{artist: The Verandah Rattlers}
+{key: A}
+
+{comment: Verse 1}
+[A]Got a flat tyre out on the [D]Hume
+[A]No spare in the boot, that's my [E]doom
+[A]Cars going by, nobody [D]stops
+[A]Just me and this shuffle 'til [E]something [A]drops
+
+{comment: Chorus}
+[D]Flat tyre shuffle, [A]stuck on the side
+[D]Flat tyre shuffle, [E]nowhere to hide
+[A]Gonna dance this [D]shuffle 'til someone comes [A]by
+[D]Flat tyre shuffle [E]under a [A]big blue sky
+
+{comment: Verse 2}
+[A]Truckie finally stopped, lent me his [D]jack
+[A]Said "son, you owe me, don't look [E]back"
+[A]Fixed her up in twenty [D]minutes flat
+[A]Wrote a song about it — [E]how about [A]that

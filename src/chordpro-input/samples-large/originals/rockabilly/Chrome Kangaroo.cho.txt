@@ -1,0 +1,21 @@
+{title: Chrome Kangaroo}
+{artist: The Verandah Rattlers}
+{key: A}
+
+{comment: Verse 1}
+[A]She's got a dint in the door and a mind of her [D]own
+[A]Bonnet held down with a bit of old [E]rope
+[A]Started her once with a screwdriver and a [D]prayer
+[A]Now she's the fastest thing [E]out on the [A]road
+
+{comment: Chorus}
+[D]Chrome Kangaroo, chrome Kangaroo
+[A]Paint job orange, muffler [E]blue
+[D]Nothing on this highway's gonna [A]catch [E]you
+[A]Chrome Kangaroo[E], Chrome Kanga[A]roo
+
+{comment: Verse 2}
+[A]Sold my surfboard, sold my [D]guitar too
+[A]Kept the ute 'cause a man knows what's [E]true
+[A]She'll rattle and she'll roar but she'll [D]always get me home
+[A]Last of the good ones, my [E]chrome kanga[A]roo
