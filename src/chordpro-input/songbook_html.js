@@ -45,10 +45,27 @@
 // on chaos2crate's source at all, the same discipline c2c-plugins' own
 // plugins follow (see that repo's README).
 import { buildCrateIndex, entitiesOfType } from "./crate_index.js";
+// Imported under different names from what initSongbookApp's own body uses
+// (CHORDPROBOOK_INSTRUMENTS_DATA/CHORDPROBOOK_CHORD_DATA, bare, further
+// down) — deliberately. Those two data constants, like ChordProSong/
+// renderSong/Transposer/ChordDiagram, are meant to be free/global
+// identifiers inside initSongbookApp's own body, resolved at runtime by the
+// classic <script>'s own `var CHORDPROBOOK_INSTRUMENTS_DATA = ...`
+// declaration (renderSongbookHtml, below) — not by this file's own import,
+// which only exists to embed their JSON at build time. A real import
+// binding is a name Vite/esbuild's minifier is free to rename in a
+// production build; initSongbookApp's body is extracted via .toString()
+// *after* minification, so a renamed reference travels with the extracted
+// text while the renamed import itself does not — leaving the standalone
+// page with a dangling reference to a mangled name nothing defines. Giving
+// the import its own distinct name here means the bundler never sees
+// initSongbookApp's own references as touching this binding at all, so it
+// has no reason to rename them — the same reason the four function globals
+// were never imported into this file's module scope to begin with.
 import {
   CHORDPROBOOK_BROWSER_BUNDLE,
-  CHORDPROBOOK_INSTRUMENTS_DATA,
-  CHORDPROBOOK_CHORD_DATA,
+  CHORDPROBOOK_INSTRUMENTS_DATA as INSTRUMENTS_DATA_FOR_EMBED,
+  CHORDPROBOOK_CHORD_DATA as CHORD_DATA_FOR_EMBED,
 } from "./generated/chordprobook_browser_bundle.js";
 
 let writeFile, readJsonFromFolder, fileExists;
@@ -3237,8 +3254,8 @@ ${embeddedJson}
 </script>
 <script>
 ${CHORDPROBOOK_BROWSER_BUNDLE}
-var CHORDPROBOOK_INSTRUMENTS_DATA = ${JSON.stringify(CHORDPROBOOK_INSTRUMENTS_DATA)};
-var CHORDPROBOOK_CHORD_DATA = ${JSON.stringify(CHORDPROBOOK_CHORD_DATA)};
+var CHORDPROBOOK_INSTRUMENTS_DATA = ${JSON.stringify(INSTRUMENTS_DATA_FOR_EMBED)};
+var CHORDPROBOOK_CHORD_DATA = ${JSON.stringify(CHORD_DATA_FOR_EMBED)};
 </script>
 <script>
 (${initSongbookApp.toString()})(document, window);
