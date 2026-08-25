@@ -11,7 +11,7 @@ See [`src/chordpro-input/SPEC.md`](src/chordpro-input/SPEC.md) for the full desi
 This is a standalone repo, not part of [`c2c-plugins`](https://github.com/Language-Research-Technology/c2c-plugins)
 (chaos2crate's own bundled plugins) — extracted from `resources2crate`, the app chaos2crate
 itself succeeded, when that project's plugins were split out of the core app. Kept separate
-from `c2c-plugins` for the same reason [`chordprobook`](https://github.com/ptsefton/chordprobook)
+from `c2c-plugins` for the same reason [`chordprobook`](https://github.com/ptsefton/chordprobook-js)
 is its own repo rather than living inside `resources2crate`/`chaos2crate`: this plugin is
 specific to one person's own use case (ChordPro charts and setlists), not something every
 chaos2crate deployment needs.
@@ -24,15 +24,15 @@ repo's own README for the contract in full, including why hook names are literal
 
 ## Consuming this package
 
-Check it out as a sibling to `chaos2crate` (and to `chordprobook`, which this plugin depends
-on directly):
+Check it out as a sibling to `chaos2crate` and `c2c-plugins`. `chordprobook` is a `github:`
+dependency of this repo (see "Setup for local development" below for working against a local
+checkout of it instead), so it does not need to be a sibling too:
 
 ```
 some-folder/
   chaos2crate/
   c2c-plugins/
   c2c-chordpro-plugin/   (this repo)
-  chordprobook/
 ```
 
 Add it as a `file:` dependency in chaos2crate's own `package.json`:
@@ -73,6 +73,28 @@ builds the RO-Crate, with no songbook page written.
 npm install
 npm run generate:chordprobook-bundle   # regenerate after changing chordprobook itself
 npm test
+```
+
+To work against a local checkout of `chordprobook` rather than the pinned `github:` dependency:
+
+```
+npm install ../chordprobook --no-save    # or: npm link ../chordprobook
+npm run generate:chordprobook-bundle
+```
+
+`--no-save` keeps this repo's `package.json`/`package-lock.json` on the pinned commit; `npm ci`
+restores it. See DEPLOY-SPEC.md §7 for why the bundle has to be regenerated after switching.
+
+## Publishing to GitHub Pages
+
+`npm run build:site` builds this repo into a publishable site — a chordpro-only chaos2crate
+app plus a demo songbook rendered from `src/chordpro-input/samples/` — with no sibling
+checkouts required. See [`DEPLOY-SPEC.md`](DEPLOY-SPEC.md) for the full design;
+`.github/workflows/pages.yml` runs it on every push to `main`.
+
+```
+npm run build:site      # writes ./site
+npm run preview:site    # serves ./site at http://localhost:4173
 ```
 
 ## Standalone CLI

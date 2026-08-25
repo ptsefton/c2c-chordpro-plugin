@@ -31,9 +31,10 @@ It has three Stages:
   machinery targets generic tabular/document crates, not this one — so `ro-crate-preview.html`
   becomes a small redirect to `songbook.html` instead (§10).
 
-The three stages depend on [`chordprobook`](https://github.com/ptsefton/chordprobook) (a sibling
-repository, `"chordprobook": "file:../chordprobook"` in `package.json`) for ChordPro/setlist
-parsing, chord transposition, and chord-diagram rendering.
+The three stages depend on [`chordprobook`](https://github.com/ptsefton/chordprobook-js) (a
+`github:` dependency, `"chordprobook": "github:ptsefton/chordprobook-js#main"` in
+`package.json` — see DEPLOY-SPEC.md §7 for working against a local sibling checkout instead)
+for ChordPro/setlist parsing, chord transposition, and chord-diagram rendering.
 
 ## 2. Scope
 
