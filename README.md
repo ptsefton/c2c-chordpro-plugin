@@ -87,10 +87,16 @@ restores it. See DEPLOY-SPEC.md §7 for why the bundle has to be regenerated aft
 
 ## Publishing to GitHub Pages
 
-`npm run build:site` builds this repo into a publishable site — a chordpro-only chaos2crate
-app plus a demo songbook rendered from `src/chordpro-input/samples/` — with no sibling
-checkouts required. See [`DEPLOY-SPEC.md`](DEPLOY-SPEC.md) for the full design;
-`.github/workflows/pages.yml` runs it on every push to `main`.
+`npm run build:site` builds this repo into a publishable site, with no sibling checkouts
+required:
+
+- `/` — a landing page (rendered from [`index.md`](index.md))
+- `/build/` — a chordpro-only chaos2crate app
+- `/demo/` — a sample songbook rendered from `src/chordpro-input/samples/`
+- `/chordpro-format.html` — [the ChordPro dialect this uses](docs/chordpro-format.md)
+
+See [`DEPLOY-SPEC.md`](DEPLOY-SPEC.md) for the full design; `.github/workflows/pages.yml` runs
+it on every push to `main`.
 
 ```
 npm run build:site      # writes ./site

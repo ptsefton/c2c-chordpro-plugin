@@ -17,5 +17,12 @@
     { "source": "src/chordpro-input/samples", "path": "demo" }
   ],
 
+  "appPath": "build",
+
+  "landing": { "source": "index.md", "path": "index.html" },
+  "pages": [
+    { "source": "docs/chordpro-format.md", "path": "chordpro-format.html" }
+  ],
+
   "outDir": "site"
 }

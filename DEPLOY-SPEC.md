@@ -12,10 +12,11 @@ Nothing here changes the plugin's behaviour or its API.
 R1. `npm run build:site` produces a publishable directory from a fresh clone of this
 repository. No sibling checkouts, no manual configuration.
 
-R2. The site root is chaos2crate configured with this plugin's input mode and the output
-plugins it needs (SPEC.md §3, §10). Generic and docx input, and xlsx and HTML crate rendering,
-are excluded from `INPUT_PLUGINS`/`PLUGINS` selection — the mode dispatch (`pipeline.js`) and
-the Settings "Input type" dropdown only ever offer `chordpro`.
+R2. `deploy.config.json`'s `appPath` (`build/`) is chaos2crate configured with this plugin's
+input mode and the output plugins it needs (SPEC.md §3, §10). Generic and docx input, and
+xlsx and HTML crate rendering, are excluded from `INPUT_PLUGINS`/`PLUGINS` selection — the
+mode dispatch (`pipeline.js`) and the Settings "Input type" dropdown only ever offer
+`chordpro`.
 
 This is narrower than excluding their code from the published bytes. chaos2crate's own
 `main.js` has two unconditional `await import(...)` calls unrelated to input-mode selection —
@@ -29,6 +30,10 @@ chaos2crate core-app change, out of scope here and not part of
 [PR #69](https://github.com/Language-Research-Technology/chaos2crate/pull/69) (§7a).
 
 R3. `/demo/songbook.html` is a songbook rendered from `src/chordpro-input/samples/`.
+
+R7. The site root (`index.html`) is a landing page — what this tool is, and links to the app
+(`appPath`), the demo songbook, and any other page `deploy.config.json` lists — rendered from
+a Markdown source committed to this repository, not generated content (§3a).
 
 R4. The chaos2crate wrapper, `c2c-plugins` and `chordprobook` are fetched from GitHub at
 pinned refs.
@@ -48,6 +53,8 @@ deployment.
 |---|---|
 | `deploy.config.json` | pinned refs and site layout (§3) |
 | `scripts/build-site.mjs` | the build script (§4) |
+| `scripts/render-markdown.mjs` | the landing/docs-page Markdown renderer (§3a) |
+| `index.md`, `docs/chordpro-format.md` | the landing page and one docs page's source (§3a) |
 | `.github/workflows/pages.yml` | CI workflow (§6) |
 | `.gitignore` | add `.site-build/` and `site/` |
 | `package.json` | `chordprobook` moves to a `github:` dependency (§7); adds `build:site` and `preview:site` |
@@ -79,6 +86,20 @@ No plugin source file changes.
     { "source": "src/chordpro-input/samples", "path": "demo" }
   ],
 
+  // Where the built app lands, instead of the site root — §3a.
+  "appPath": "build",
+
+  // Rendered to site/index.html — §3a. Optional: a site with no landing
+  // page configured gets no index.html of its own (the app would need to
+  // be at appPath: "" — the site root — for that to make sense at all).
+  "landing": { "source": "index.md", "path": "index.html" },
+
+  // Any number of further Markdown pages, same {source, path} shape as
+  // landing and demo — §3a.
+  "pages": [
+    { "source": "docs/chordpro-format.md", "path": "chordpro-format.html" }
+  ],
+
   "outDir": "site"
 }
 ```
@@ -88,6 +109,28 @@ branches are accepted so a `workflow_dispatch` run can test an upgrade without a
 
 chaos2crate and `c2c-plugins` are maintained elsewhere. Pinning means an upstream commit
 cannot change what this site publishes; upgrading is a reviewable one-line diff.
+
+## 3a. The landing page and appPath
+
+R2/R7 need the app and the site root to be two different things. `appPath` moves the app's
+build output from the site root to `site/<appPath>/` (§4.5's asset-path check keeps working
+unchanged, since `vite.config.js`'s `base: "./"` makes chaos2crate's own `dist/index.html`
+correct from any subpath, not just the root).
+
+The site root itself, and any other page named in `pages`, comes from a plain Markdown file
+committed to this repository — `index.md` at the repo root, `docs/chordpro-format.md` for the
+one other page this deployment currently has — rendered by `scripts/render-markdown.mjs`, a
+small, purpose-built Markdown-to-HTML converter (headings, paragraphs, links, bold/italic/
+inline code, lists, fenced code blocks, pipe tables) rather than a real Markdown library: the
+same restraint `songbook_html.js`'s own `renderNoteMarkdown` already applies, for the same
+reason — every construct supported is one this repository's own docs actually use, not a
+hypothetical future one. Each page is wrapped in a minimal, self-contained HTML shell (a
+`<title>` taken from the Markdown's own first heading, and enough CSS to be readable in light
+and dark) — no build step, no external assets, nothing else published depends on it existing.
+
+Both `landing` and `pages` read their source directly from this repository's own working tree
+(`repoRoot`, not the scratch workspace) — they're static content belonging to this plugin, not
+anything built from chaos2crate, chordprobook, or a folder a user picks.
 
 ## 4. scripts/build-site.mjs
 
@@ -195,7 +238,8 @@ subpath (`https://<user>.github.io/<repo>/`) without an override. The script che
 URLs in the built `index.html` are relative, and fails under `--strict` if they are not. An
 upstream change to `base` would otherwise publish a page whose assets 404.
 
-`dist/` is copied to `<outDir>/`.
+`dist/` is copied to `<outDir>/<appPath>/` (§3a) — `<outDir>/` directly if `appPath` is unset
+or empty.
 
 ### 4.6 Build the demo songbook
 
@@ -328,18 +372,30 @@ dependency. Only the plugin source and the rendered folders differ:
   "wrapper": { "repo": "Language-Research-Technology/chaos2crate", "ref": "<sha>" },
   "plugins": { "repo": "Language-Research-Technology/c2c-plugins", "ref": "<sha>" },
   "plugin":  { "repo": "ptsefton/c2c-chordpro-plugin", "ref": "<sha>" },
+  "inputPlugins": "chordpro=c2c-chordpro-plugin",
+  "additivePlugins": [
+    "ro-crate-json-output",
+    "songbook=c2c-chordpro-plugin/src/chordpro-input/songbook_html.js"
+  ],
   "demo":    [ { "source": "songs", "path": "songbook" } ],
   "outDir":  "site"
 }
 ```
 
 With `plugin` given as `{repo, ref}` rather than `"self"`, §4.2 becomes a third clone;
-everything downstream is unchanged. `inputPlugins` and `additivePlugins` default to the values
-in §3.
+everything downstream is unchanged. `inputPlugins`/`additivePlugins` are this same repo's own
+values (§3) — copy them as they stand unless a different plugin selection is actually wanted.
+
+`appPath`/`landing`/`pages` (§3a) are independently optional: a repository with nothing to say
+beyond "here's the app" can leave all three out and get the app built straight to the site
+root, as this repository itself did before adding a landing page. A repository that wants its
+own landing page needs its own Markdown source (`landing.source`) — `index.md`/
+`docs/chordpro-format.md` here aren't fetched from anywhere; they're this repository's own
+committed content.
 
 Such a repository needs `deploy.config.json`, the workflow, and a copy of
-`scripts/build-site.mjs`. The script has no package dependencies, so copying the file is the
-whole installation.
+`scripts/build-site.mjs` (plus `scripts/render-markdown.mjs` if it uses `landing`/`pages`).
+Neither script has package dependencies, so copying the files is the whole installation.
 
 Two properties of the result are worth stating, as the script does not enforce either.
 A GitHub Pages site on a public repository is public, including the charts. The whole
@@ -349,11 +405,8 @@ limited to organisation members.
 
 ## 9. Deferred
 
-D1. A landing page. The app is at `/` and the demo at `/demo/`, with no link between them.
-A `landing: true` mode that moves the app to `/app/` and generates an index would address
-this.
-
-D2. Publishing `build-site.mjs` as a package rather than copying it (§8).
+D2. Publishing `build-site.mjs` (and `render-markdown.mjs`) as a package rather than copying
+them (§8).
 
 D3. Automated upgrade of the pinned refs, e.g. a scheduled job that opens a pull request when
 chaos2crate tags a release.

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// Builds a publishable static site from this repository: a chordpro-only
-// chaos2crate app at the site root, plus a demo songbook. See DEPLOY-SPEC.md
-// for the full design; this script implements DEPLOY-SPEC.md §4.
+// Builds a publishable static site from this repository: a Markdown landing
+// page at the site root, the chordpro-only chaos2crate app under
+// deploy.config.json's `appPath`, a demo songbook, and any other Markdown
+// pages `deploy.config.json` lists. See DEPLOY-SPEC.md for the full design;
+// this script implements DEPLOY-SPEC.md §4.
 //
 // Usage:
 //   node scripts/build-site.mjs [--out site] [--work .site-build] [--clean]
@@ -10,7 +12,10 @@
 //
 // No package dependencies beyond Node builtins, git, and npm on PATH — see
 // DEPLOY-SPEC.md §8 on why that matters (this file is the whole install for
-// a repo consuming this pattern).
+// a repo consuming this pattern). render-markdown.mjs (same rule) is the one
+// exception to "no new files this script doesn't need" — it's small enough,
+// and specific enough to this repo's own docs, to count as part of the
+// build script rather than a real new dependency.
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync,
@@ -18,6 +23,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderMarkdownPage } from "./render-markdown.mjs";
 import http from "node:http";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -248,6 +254,19 @@ function buildDemo(pluginDir, demoEntry, outDir) {
   );
 }
 
+// ---- landing page + docs pages -------------------------------------------
+
+// Both `landing` and each entry in `pages` are Markdown files that live in
+// this repo's own working tree (not the scratch workspace — they're static
+// content belonging to this plugin, not built from chaos2crate), rendered
+// with render-markdown.mjs into a plain, self-contained HTML page at
+// `outDir/<path>`.
+function buildMarkdownPage(sourcePath, destPath) {
+  const markdown = readFileSync(sourcePath, "utf8");
+  mkdirSync(path.dirname(destPath), { recursive: true });
+  writeFileSync(destPath, renderMarkdownPage(markdown));
+}
+
 // ---- tree printing ------------------------------------------------------
 
 function formatSize(bytes) {
@@ -306,9 +325,19 @@ async function main() {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
+  if (config.landing) {
+    log(`rendering landing page: ${config.landing.source} -> ${config.landing.path}`);
+    buildMarkdownPage(path.join(repoRoot, config.landing.source), path.join(outDir, config.landing.path));
+  }
+  for (const page of config.pages || []) {
+    log(`rendering page: ${page.source} -> ${page.path}`);
+    buildMarkdownPage(path.join(repoRoot, page.source), path.join(outDir, page.path));
+  }
+
   if (args.only !== "demo") {
     const dist = buildApp(workDir, config, args.strict);
-    cpSync(dist, outDir, { recursive: true });
+    const appDest = config.appPath ? path.join(outDir, config.appPath) : outDir;
+    cpSync(dist, appDest, { recursive: true });
   }
 
   if (args.only !== "app") {
