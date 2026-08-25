@@ -10,9 +10,10 @@
 //                                [--strict] [--skip-tests] [--only app|demo]
 //   node scripts/build-site.mjs --serve [--out site] [--port 4173]
 //
-// No package dependencies beyond Node builtins, git, and npm on PATH — see
-// DEPLOY-SPEC.md §8 on why that matters (this file is the whole install for
-// a repo consuming this pattern). render-markdown.mjs (same rule) is the one
+// No package dependencies beyond Node builtins, git, and npm on PATH, and
+// this repo's own existing dependencies (jszip, below) — see DEPLOY-SPEC.md
+// §8 on why that matters (this file is the whole install for a repo
+// consuming this pattern). render-markdown.mjs (same rule) is the one
 // exception to "no new files this script doesn't need" — it's small enough,
 // and specific enough to this repo's own docs, to count as part of the
 // build script rather than a real new dependency.
@@ -23,6 +24,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import JSZip from "jszip";
 import { renderMarkdownPage } from "./render-markdown.mjs";
 import http from "node:http";
 
@@ -239,7 +241,18 @@ function buildApp(workDir, config, strict) {
 
 // ---- §4.6 build the demo songbook(s) ----------------------------------------
 
-function buildDemo(pluginDir, demoEntry, outDir) {
+// Mirrors chordpro_crate.js's own GENERATED_FILENAMES (a local copy there
+// too, of chaos2crate's own list, for the same reason: this script has no
+// import dependency on the plugin's source, only a copy/npm relationship to
+// it — see that file's own header comment). Excluded from the samples zip
+// (below) since they're this plugin's own build output, not source content
+// someone downloading the zip would want to start from.
+const GENERATED_ARTIFACT_NAMES = new Set([
+  "ro-crate-metadata.json", "ro-crate-metadata.jsonld", "ro-crate-metadata.xlsx",
+  "ro-crate-preview.html", "additional-ro-crate-metadata.xlsx", "songbook.html",
+]);
+
+async function buildDemo(pluginDir, demoEntry, outDir) {
   const sourceInCopy = path.join(pluginDir, demoEntry.source);
   run("node", [path.join(pluginDir, "src", "chordpro-input", "build-songbook.mjs"), sourceInCopy]);
 
@@ -252,6 +265,24 @@ function buildDemo(pluginDir, demoEntry, outDir) {
     path.join(destDir, "index.html"),
     '<!doctype html><meta http-equiv="refresh" content="0; url=songbook.html">\n',
   );
+
+  if (demoEntry.zip) {
+    await buildSamplesZip(sourceInCopy, path.join(destDir, demoEntry.zip));
+  }
+}
+
+// A downloadable zip of the demo's own source charts/setlists — the point
+// is to hand someone a folder they can point this tool at themselves, not
+// a copy of what this tool already produced from it.
+async function buildSamplesZip(sourceDir, destZipPath) {
+  const zip = new JSZip();
+  for (const name of readdirSync(sourceDir)) {
+    if (name.startsWith(".") || name.startsWith("~$") || GENERATED_ARTIFACT_NAMES.has(name)) continue;
+    const fullPath = path.join(sourceDir, name);
+    if (statSync(fullPath).isDirectory()) continue; // samples/ is flat; nothing here to recurse into
+    zip.file(name, readFileSync(fullPath));
+  }
+  writeFileSync(destZipPath, await zip.generateAsync({ type: "nodebuffer" }));
 }
 
 // ---- landing page + docs pages -------------------------------------------
@@ -343,7 +374,7 @@ async function main() {
   if (args.only !== "app") {
     for (const demoEntry of config.demo) {
       log(`building demo songbook: ${demoEntry.source} -> ${demoEntry.path}/`);
-      buildDemo(pluginDir, demoEntry, outDir);
+      await buildDemo(pluginDir, demoEntry, outDir);
     }
   }
 

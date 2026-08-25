@@ -92,7 +92,8 @@ required:
 
 - `/` — a landing page (rendered from [`index.md`](index.md))
 - `/build/` — a chordpro-only chaos2crate app
-- `/demo/` — a sample songbook rendered from `src/chordpro-input/samples/`
+- `/demo/` — a sample songbook rendered from `src/chordpro-input/samples/`, plus
+  `/demo/samples.zip` — the same folder's source charts/setlist, downloadable
 - `/chordpro-format.html` — [the ChordPro dialect this uses](docs/chordpro-format.md)
 
 See [`DEPLOY-SPEC.md`](DEPLOY-SPEC.md) for the full design; `.github/workflows/pages.yml` runs

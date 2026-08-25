@@ -140,8 +140,8 @@ node scripts/build-site.mjs [--out site] [--work .site-build] [--clean] [--stric
 npm run build:site -- [flags]
 ```
 
-Requires Node, `git` and `npm`. No package dependencies. Each external command is logged
-before it runs.
+Requires Node, `git` and `npm`. No package dependencies beyond what this repo already has
+(`jszip`, used for §4.6's samples zip). Each external command is logged before it runs.
 
 ### 4.1 Scratch workspace
 
@@ -257,6 +257,15 @@ given. Running it against the copy satisfies R5 and leaves the committed
 Copied to `<outDir>/<path>/`: `songbook.html`, `ro-crate-metadata.json`, and the source
 `.cho.txt` and `.setlist.md` files, so the demo also serves as an example source folder. An
 `index.html` containing a meta refresh to `songbook.html` is written so `/demo/` resolves.
+
+A `demo` entry's own `zip` key (e.g. `"zip": "samples.zip"`) additionally writes a downloadable
+zip of just the source content at `<outDir>/<path>/<zip>` — the point being to hand someone a
+folder they can point this tool at themselves, not a copy of what the tool already built from
+it. Built with `jszip` (already a real dependency of this repo, for `fix_st_directive_ui.js`'s
+own backup zips — not a new one introduced for this), from the same folder the CLI just wrote
+into, filtered against a local copy of `chordpro_crate.js`'s own `GENERATED_FILENAMES` (dotfiles
+and `~$`-prefixed files excluded the same way) so `songbook.html`/`ro-crate-metadata.json`
+never end up inside their own zip.
 
 ### 4.7 Output
 
@@ -395,7 +404,9 @@ committed content.
 
 Such a repository needs `deploy.config.json`, the workflow, and a copy of
 `scripts/build-site.mjs` (plus `scripts/render-markdown.mjs` if it uses `landing`/`pages`).
-Neither script has package dependencies, so copying the files is the whole installation.
+Neither script has package dependencies of its own beyond `jszip` (§4.6, only reached when a
+`demo` entry sets `zip`) — a repository not using that option needs nothing further; one that
+does needs `jszip` as its own dependency too.
 
 Two properties of the result are worth stating, as the script does not enforce either.
 A GitHub Pages site on a public repository is public, including the charts. The whole

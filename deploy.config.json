@@ -14,7 +14,7 @@
   ],
 
   "demo": [
-    { "source": "src/chordpro-input/samples", "path": "demo" }
+    { "source": "src/chordpro-input/samples", "path": "demo", "zip": "samples.zip" }
   ],
 
   "appPath": "build",
