@@ -249,6 +249,28 @@ export function initSongbookApp(document, window) {
     }
   }
 
+  // The key actually sounding for a {key}/{transpose} pair, for list rows
+  // (the song list's key tag, and a setlist entry's own row when it carries
+  // its own transpose override) — contexts with no parsed/rendered song at
+  // hand to read chordprobook's own computed `effectiveKey` off of (that's
+  // what renderCurrentSong does instead, via renderSong(); see
+  // populateKeySelect's own comment). This calls the real Transposer class
+  // directly (a bare global from CHORDPROBOOK_BROWSER_BUNDLE, unmodified) —
+  // it does none of the transposition math itself, only builds the plain
+  // {originalKey, key, transpose, capo} object that class expects (the same
+  // shape Song.js's own renderSong builds internally; Transposer.js's own
+  // header comment calls this "the adapter"). `transposeOverride` is
+  // whatever's chosen for this song/entry specifically (a note name picked
+  // from the key dropdown, or a numeric semitone offset) — null/undefined
+  // falls back to `defaultTranspose`, the song's own authored
+  // {transpose}/{tr} directive (chordpro_crate.js's own custom:transpose).
+  function effectiveKey(key, transposeOverride, defaultTranspose) {
+    if (!key) return null;
+    const transposerInput = { originalKey: key, key: null, transpose: transposeOverride ?? (defaultTranspose || null), capo: 0 };
+    new Transposer(transposerInput);
+    return transposerInput.key;
+  }
+
   // composer/performer/subtitle/key: read via asArray()[0], same defensive
   // habit as `name` just below — chordpro_crate.js itself only ever writes
   // these as plain strings (SPEC.md §7), but nothing here can assume the
@@ -265,15 +287,31 @@ export function initSongbookApp(document, window) {
   const songs = graph
     .filter((entity) => asArray(entity["@type"]).includes("MusicComposition")
       && !("specializationOf" in entity) && !("custom:matchStatus" in entity))
-    .map((entity) => ({
-      id: entity["@id"],
-      name: String(asArray(entity.name)[0] || entity["@id"]),
-      text: entity.text,
-      composer: String(asArray(entity.composer)[0] || ""),
-      performer: String(asArray(entity.performer)[0] || ""),
-      subtitle: String(asArray(entity.subtitle)[0] || ""),
-      key: String(asArray(entity.musicalKey)[0] || ""),
-    }))
+    .map((entity) => {
+      // musicalKey/custom:transpose themselves stay the song's own authored
+      // values (correct RO-Crate semantics — a personal transpose preference
+      // shouldn't overwrite what key the piece was actually written in);
+      // kept alongside the computed `key` below so a setlist entry with its
+      // own transpose override (buildSetlistEntryRow) can re-derive *its*
+      // effective key from the same original rather than compounding on
+      // top of this song's own default.
+      const rawKey = String(asArray(entity.musicalKey)[0] || "");
+      const defaultTranspose = String(asArray(entity["custom:transpose"])[0] || "");
+      return {
+        id: entity["@id"],
+        name: String(asArray(entity.name)[0] || entity["@id"]),
+        text: entity.text,
+        composer: String(asArray(entity.composer)[0] || ""),
+        performer: String(asArray(entity.performer)[0] || ""),
+        subtitle: String(asArray(entity.subtitle)[0] || ""),
+        rawKey,
+        defaultTranspose,
+        // The key tag shown in the song list — what this song actually
+        // sounds like at its own default custom:transpose, matching the
+        // song view and the rendered chords (see effectiveKey above).
+        key: effectiveKey(rawKey, null, defaultTranspose),
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // The one credit shown under a title in a list row (SPEC.md §12) —
@@ -609,7 +647,13 @@ export function initSongbookApp(document, window) {
   // alongside ChordProSong/renderSong (see this function's own header
   // comment) — needed here for its `notes` table and `transposeKey()`,
   // not for chord transposition itself, which renderSong already does.
-  function populateKeySelect(parsedSong) {
+  // soundingKey comes from the caller's own renderSong() result
+  // (renderCurrentSong, below) rather than being recomputed here — it's
+  // already chordprobook's own `effectiveKey` for whatever's actually
+  // rendered (currentTranspose when set, the song's own {transpose}/{tr}
+  // otherwise), so this never needs a second, separate Transposer
+  // construction that could drift from what the chords themselves show.
+  function populateKeySelect(parsedSong, soundingKey) {
     if (!parsedSong.hasChords) {
       setHidden(keySelect, true);
       keySelect.replaceChildren();
@@ -620,7 +664,6 @@ export function initSongbookApp(document, window) {
 
     if (parsedSong.key) {
       const minor = parsedSong.key.endsWith("m");
-      const soundingKey = currentTranspose ?? parsedSong.key;
       for (const note of Transposer.notes) {
         const value = minor ? `${note}m` : note;
         const option = document.createElement("option");
@@ -644,7 +687,9 @@ export function initSongbookApp(document, window) {
     }
   }
 
-  function populateCapoSelect(parsedSong) {
+  // soundingKey: same caller-supplied renderSong() result populateKeySelect
+  // now takes, reused here rather than recomputed a second time.
+  function populateCapoSelect(parsedSong, soundingKey) {
     if (!parsedSong.hasChords) {
       setHidden(capoSelect, true);
       capoSelect.replaceChildren();
@@ -653,9 +698,6 @@ export function initSongbookApp(document, window) {
     setHidden(capoSelect, false);
     capoSelect.replaceChildren();
 
-    const soundingKey = parsedSong.key
-      ? (typeof currentTranspose === "string" ? currentTranspose : parsedSong.key)
-      : null;
     const capo = currentCapo ?? parsedSong.capo ?? 0;
 
     const noCapoOption = document.createElement("option");
@@ -775,8 +817,8 @@ export function initSongbookApp(document, window) {
 
     songPagesElement.innerHTML = rendered.pages.join("\n");
     songContent.classList.toggle("chords-hidden", chordsHidden);
-    populateKeySelect(parsedSong);
-    populateCapoSelect(parsedSong);
+    populateKeySelect(parsedSong, rendered.effectiveKey);
+    populateCapoSelect(parsedSong, rendered.effectiveKey);
     setHidden(instrumentSelect, !parsedSong.hasChords);
     setHidden(toggleChordsButton, !parsedSong.hasChords);
     renderChordDiagrams(parsedSong.hasChords ? rendered.chordsUsed : []);
@@ -1808,13 +1850,22 @@ export function initSongbookApp(document, window) {
       });
     }
     row.appendChild(nameElement);
-    // The underlying song's own credit/key (SPEC.md §12), never anything of
-    // the entry's own — an entry carries no composer/performer/subtitle/key
-    // itself, only transpose/capo overrides and freeform notes (§6/§7).
-    // null for an unresolved entry (entry.songIndex === -1), which
-    // appendListCredit treats the same as a resolved song with nothing to
-    // show: nothing rendered.
-    appendListCredit(row, entry.songIndex >= 0 ? songs[entry.songIndex] : null);
+    // The underlying song's own credit (SPEC.md §12) — an entry carries no
+    // composer/performer/subtitle of its own, only transpose/capo overrides
+    // and freeform notes (§6/§7). The *key* shown, though, does need to be
+    // this entry's own: when it carries its own transpose override, that's
+    // what this performance actually sounds like, which can genuinely
+    // differ from the song's own default (the same override showSong()
+    // already feeds into renderSong() — SPEC.md §6 — so this just displays
+    // what building that entry's own chart already produces). null for an
+    // unresolved entry (entry.songIndex === -1), which appendListCredit
+    // treats the same as a resolved song with nothing to show: nothing
+    // rendered.
+    const baseSong = entry.songIndex >= 0 ? songs[entry.songIndex] : null;
+    const displaySong = baseSong && entry.transpose !== undefined
+      ? { ...baseSong, key: effectiveKey(baseSong.rawKey, entry.transpose, baseSong.defaultTranspose) }
+      : baseSong;
+    appendListCredit(row, displaySong);
 
     // Directly actionable, not just descriptive: matchStatus/
     // matchCandidates are written at crate-build time (chordpro_crate.js)

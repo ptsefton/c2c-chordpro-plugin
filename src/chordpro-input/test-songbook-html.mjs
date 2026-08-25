@@ -174,6 +174,38 @@ const SETLIST_CRATE_JSON = {
   ],
 };
 
+// A song with its own {key}+{transpose} directive, plus one setlist entry
+// that inherits its default transpose and one that overrides it with its
+// own — the song list's key tag, the song-view key select, and a setlist
+// entry's own row must all show what the chords actually sound like, not
+// the raw {key} value alone (PT: a real chart with {key: E}/{tr: -2} showed
+// "E" in the list and the song-view header while the chords themselves,
+// correctly, rendered in D). entry-2's own "+2" is computed from the song's
+// *original* key (E), the same way the song's own default is — not stacked
+// on top of it — so it sounds in F#, not in D transposed up two more.
+const TRANSPOSE_CRATE_JSON = {
+  "@graph": [
+    { "@id": "./", "@type": "Dataset", name: "Transpose" },
+    {
+      "@id": "song.cho.txt", "@type": "MusicComposition", name: "Transposed Song",
+      text: "{title: Transposed Song}\n{key: E}\n{tr: -2}\n\n[E]Verse",
+      musicalKey: "E", "custom:transpose": "-2",
+    },
+    {
+      "@id": "gig.setlist.md", "@type": "MusicPlaylist", name: "Friday Gig",
+      hasPart: [{ "@id": "gig.setlist.md#entry-1" }, { "@id": "gig.setlist.md#entry-2" }],
+    },
+    {
+      "@id": "gig.setlist.md#entry-1", "@type": "MusicComposition", name: "Transposed Song",
+      "custom:matchStatus": "exact", specializationOf: { "@id": "song.cho.txt" },
+    },
+    {
+      "@id": "gig.setlist.md#entry-2", "@type": "MusicComposition", name: "Transposed Song (up a step)",
+      "custom:matchStatus": "exact", specializationOf: { "@id": "song.cho.txt" }, "custom:transpose": "+2",
+    },
+  ],
+};
+
 // One "#" set with its own text (chordpro_crate.js's own property for
 // freeform text between a "#" heading and its first entry — SPEC.md §6/§6.2
 // — a deliberate overload of the same property name a canonical Song uses
@@ -2063,6 +2095,44 @@ function isFittedFontSize(value) {
   assert.equal(entry4.children[1].href, undefined); // <span> — songIndex === -1
   assert.equal(entry4.children[2].textContent, "~");
   assert.ok(entry4.children[2].title.includes("no matching song found"));
+}
+
+{
+  // Song list: the key tag shows what {key: E}/{tr: -2} actually sounds
+  // like (D), not the raw {key} value — TRANSPOSE_CRATE_JSON's own header
+  // comment.
+  const { doc, elements } = fakeDocument(TRANSPOSE_CRATE_JSON);
+  initSongbookApp(doc, fakeWindow());
+  const row = elements["song-list"].children[0];
+  const key = row.children[0].children.find((c) => c.className === "list-key");
+  assert.equal(key.textContent, "D");
+
+  // Song view: the key select shows/selects the same "D", and the chords
+  // are transposed to match (renderSong's own effectiveKey, threaded
+  // through populateKeySelect rather than recomputed separately).
+  songLink(elements, 0).click();
+  const keySelect = elements["key-select"];
+  assert.equal(keySelect.children.find((o) => o.value === "D").selected, true);
+  assert.ok(elements["song-pages"].innerHTML.includes('<span class="inlineChord">[D]</span>'));
+}
+
+{
+  // Setlist entries: entry-1 inherits the song's own default (D, same as
+  // the plain song-list case above); entry-2's own "custom:transpose": "+2"
+  // overrides it — and must show its *own* effective key (F#, from the
+  // song's original E, not "D transposed up two more") rather than falling
+  // back to the song's default the way a capo-only override correctly does
+  // (SETLIST_CRATE_JSON's own entry-2 test, above — capo never changes the
+  // displayed key, only transpose does).
+  const { doc, elements } = fakeDocument(TRANSPOSE_CRATE_JSON);
+  initSongbookApp(doc, fakeWindow());
+  setlistLink(elements, 0).click();
+
+  const rows = elements["setlist-entries"].children;
+  assert.equal(rows.length, 2);
+  const keyOf = (row) => row.children.find((c) => c.className === "list-key").textContent;
+  assert.equal(keyOf(rows[0]), "D");
+  assert.equal(keyOf(rows[1]), "F#");
 }
 
 {
