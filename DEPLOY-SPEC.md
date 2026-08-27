@@ -89,6 +89,10 @@ No plugin source file changes.
   // Where the built app lands, instead of the site root — §3a.
   "appPath": "build",
 
+  // A bare visit to <appPath>/ gets redirected, client-side, to one naming
+  // this MASP profile — §3a.
+  "forceProfile": "chordpro-songs",
+
   // Rendered to site/index.html — §3a. Optional: a site with no landing
   // page configured gets no index.html of its own (the app would need to
   // be at appPath: "" — the site root — for that to make sense at all).
@@ -116,6 +120,19 @@ R2/R7 need the app and the site root to be two different things. `appPath` moves
 build output from the site root to `site/<appPath>/` (§4.5's asset-path check keeps working
 unchanged, since `vite.config.js`'s `base: "./"` makes chaos2crate's own `dist/index.html`
 correct from any subpath, not just the root).
+
+**`forceProfile`** patches the built `<appPath>/index.html` after Vite builds it, inserting a
+small script as the first thing in `<head>`: if the URL has no `?profile=` (or any other
+override — checked, not clobbered), it sets one and reloads via `location.replace` before
+chaos2crate's own bundle starts loading, so there's no flash of its ordinary Select-Profile
+step. This is a build-time patch of already-built output, not a chaos2crate change — it makes
+sure chaos2crate's own `?profile=` override (that app's own SPEC.md §8) is present on the URL
+for a bare link, which is all a Pages visitor ever follows. Idempotent (a URL that already
+names a profile is left alone), so it can never redirect twice. Requires a real MASP profile
+of that name to actually exist — `chordpro-songs` does, in `c2c-masp-profiles`, with
+`enabledOptionKeys` already covering `fixStDirective`/`reviewSetlistMatches` (chaos2crate's
+own SPEC.md §8a covers what this doesn't reach: Describe and the Build click are unaffected,
+still requiring their own clicks, since removing those is a chaos2crate-side change).
 
 The site root itself, and any other page named in `pages`, comes from a plain Markdown file
 committed to this repository — `index.md` at the repo root, `docs/chordpro-format.md` for the

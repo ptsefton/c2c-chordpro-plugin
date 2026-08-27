@@ -218,6 +218,21 @@ function verifyBundle(pluginDir, strict) {
 
 // ---- §4.5 build the app -----------------------------------------------------
 
+// A visit to `<appPath>/` with no `?profile=` (or any other query string —
+// preserved, not clobbered) gets redirected, client-side, to one that names
+// `profileId` — before chaos2crate's own bundle even starts loading, so
+// there's no flash of the un-profiled Select-Profile step. This is a
+// build-time patch of the already-built dist/index.html, not a chaos2crate
+// change: chaos2crate's own `?profile=` override (SPEC.md §8) already does
+// everything needed once the query string is there; this just makes sure
+// it's there for a bare link. Idempotent — a URL that already names a
+// profile is left alone, so this can never redirect twice.
+function forceProfileRedirectScript(profileId) {
+  return `<script>(function(){var p=new URLSearchParams(location.search);`
+    + `if(!p.has("profile")){p.set("profile",${JSON.stringify(profileId)});`
+    + `location.replace(location.pathname+"?"+p.toString()+location.hash);}})();</script>\n`;
+}
+
 function buildApp(workDir, config, strict) {
   const chaos2crateDir = path.join(workDir, "chaos2crate");
   run("npm", ["run", "build"], {
@@ -228,7 +243,8 @@ function buildApp(workDir, config, strict) {
       INPUT_PLUGINS: config.inputPlugins,
     },
   });
-  const indexHtml = readFileSync(path.join(chaos2crateDir, "dist", "index.html"), "utf8");
+  const indexHtmlPath = path.join(chaos2crateDir, "dist", "index.html");
+  let indexHtml = readFileSync(indexHtmlPath, "utf8");
   const hasAbsoluteAsset = /(?:src|href)="\/[^/]/.test(indexHtml);
   if (hasAbsoluteAsset) {
     const msg = "chaos2crate's built index.html references an absolute asset path — "
@@ -236,6 +252,19 @@ function buildApp(workDir, config, strict) {
     if (strict) throw new Error(`build-site: ${msg}`);
     log(`WARNING: ${msg}`);
   }
+
+  if (config.forceProfile) {
+    if (!indexHtml.includes("<head>")) {
+      const msg = "could not inject the forceProfile redirect — dist/index.html has no <head> tag";
+      if (strict) throw new Error(`build-site: ${msg}`);
+      log(`WARNING: ${msg}`);
+    } else {
+      log(`patching dist/index.html to force ?profile=${config.forceProfile} on a bare visit`);
+      indexHtml = indexHtml.replace("<head>", `<head>\n${forceProfileRedirectScript(config.forceProfile)}`);
+      writeFileSync(indexHtmlPath, indexHtml);
+    }
+  }
+
   return path.join(chaos2crateDir, "dist");
 }
 

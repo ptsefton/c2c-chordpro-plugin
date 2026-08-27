@@ -18,6 +18,7 @@
   ],
 
   "appPath": "build",
+  "forceProfile": "chordpro-songs",
 
   "landing": { "source": "index.md", "path": "index.html" },
   "pages": [
