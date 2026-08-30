@@ -6,9 +6,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ChordProSong, guessKey } from "chordprobook";
 import {
   buildCrateFromChordProFolder, rankCandidatesByPath, findAmbiguousSetlistMatches, extractPersistedSetlistMatches,
-  extractReviewableSetlistMatches,
+  extractReviewableSetlistMatches, extractReviewableSongKeys, insertKeyDirective,
 } from "./chordpro_crate.js";
 
 const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "samples");
@@ -694,6 +695,124 @@ function threeWayAmbiguousTree() {
   const entryEntity = byId.get("gigs/friday/gig.setlist.md#entry-1");
   assert.equal(entryEntity["custom:matchStatus"], "exact");
   assert.deepEqual(entryEntity.specializationOf, { "@id": "gigs/friday/Sunrise.cho.txt" });
+}
+
+/* ---------- guessing a missing key (SPEC.md §17) ---------- */
+
+{
+  // No {key:} at all — the entity gets a guessed one, plus custom:keyStatus
+  // "guessed". Computed independently here via chordprobook's own
+  // ChordProSong/guessKey (not hand-derived music theory), same "match the
+  // real implementation's real output" convention chordprobook's own
+  // SPEC.md §6 documents.
+  const text = "{title: No Key Here}\n[G]This [C]song has [D]no key [Em]directive";
+  const expected = guessKey(new ChordProSong(text).chordsUsed);
+  assert.ok(expected.length, "expected this chord set to yield at least one guess");
+
+  const tree = { "song.cho.txt": Buffer.from(text) };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const entity = result.crate.toJSON()["@graph"].find((e) => e["@id"] === "song.cho.txt");
+  assert.equal(entity.musicalKey, expected[0].key);
+  assert.equal(entity["custom:keyStatus"], "guessed");
+}
+
+{
+  // An authored {key:} is untouched — no custom:keyStatus at all, guesser
+  // never even runs (a bare chord list that would obviously guess
+  // differently, {key: F}, is used deliberately, so this could only pass if
+  // the authored value actually won).
+  const tree = { "song.cho.txt": Buffer.from("{title: Has A Key}\n{key: F}\n[G]Everything [C]else [D]says otherwise") };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const entity = result.crate.toJSON()["@graph"].find((e) => e["@id"] === "song.cho.txt");
+  assert.equal(entity.musicalKey, "F");
+  assert.equal("custom:keyStatus" in entity, false);
+}
+
+{
+  // No chords at all: guessKey() has nothing to work with (chordprobook's
+  // own SPEC.md §3.9) — musicalKey stays unset entirely, same as an
+  // authored file that simply never had a key, not a guess of "no key".
+  const tree = { "song.cho.txt": Buffer.from("{title: Lyrics Only}\nJust words, no brackets anywhere.") };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const entity = result.crate.toJSON()["@graph"].find((e) => e["@id"] === "song.cho.txt");
+  assert.equal("musicalKey" in entity, false);
+  assert.equal("custom:keyStatus" in entity, false);
+}
+
+{
+  // Rebuild reuse: a "confirmed" key from a prior crate — deliberately one
+  // this song's own chords would never guess on their own, so this can only
+  // pass if the prior value actually won over a fresh guess, not by
+  // coincidence. Simulates a human having reviewed and hand-typed a key via
+  // "Review guessed keys…" (SPEC.md §17), then rebuilding without changing
+  // the song file itself.
+  const text = "{title: Reused Key}\n[G]This [C]song [D]would guess [Em]something else";
+  const tree = { "song.cho.txt": Buffer.from(text) };
+
+  const firstBuild = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const priorCrateJson = firstBuild.crate.toJSON();
+  const priorEntity = priorCrateJson["@graph"].find((e) => e["@id"] === "song.cho.txt");
+  priorEntity.musicalKey = "Bb"; // a human's own override — not what the chords above would guess
+  priorEntity["custom:keyStatus"] = "confirmed";
+
+  const rebuildTree = { ...tree, "ro-crate-metadata.json": Buffer.from(JSON.stringify(priorCrateJson)) };
+  const secondBuild = await buildCrateFromChordProFolder(memoryDirHandle("root", rebuildTree), {}, () => {});
+  const rebuiltEntity = secondBuild.crate.toJSON()["@graph"].find((e) => e["@id"] === "song.cho.txt");
+  assert.equal(rebuiltEntity.musicalKey, "Bb");
+  assert.equal(rebuiltEntity["custom:keyStatus"], "confirmed");
+}
+
+{
+  // extractReviewableSongKeys: both "guessed" and "confirmed" entries are
+  // reviewable (a prior review is always revisitable, SPEC.md §17); a
+  // setlist-entry proxy and an authored-key song are both excluded, even
+  // though the former is also typed MusicComposition.
+  const text = "{title: Reviewable}\n[C]One [F]two [G]three";
+  const tree = {
+    "song.cho.txt": Buffer.from(text),
+    "authored.cho.txt": Buffer.from("{title: Authored}\n{key: A}\n[A]Has its own key"),
+  };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const crateJson = result.crate.toJSON();
+  const reviewable = extractReviewableSongKeys(crateJson);
+
+  assert.equal(reviewable.length, 1);
+  const [item] = reviewable;
+  assert.equal(item.id, "song.cho.txt");
+  assert.equal(item.title, "Reviewable");
+  assert.equal(item.keyStatus, "guessed");
+  assert.equal(item.currentKey, guessKey(new ChordProSong(text).chordsUsed)[0].key);
+  assert.ok(Array.isArray(item.candidates) && item.candidates.length);
+}
+
+/* ---------- insertKeyDirective (SPEC.md §17) ---------- */
+
+{
+  // The common case: a {title:}/{t:} line to insert directly after.
+  const result = insertKeyDirective("{title: A Song}\n[C]Some lyrics", "G");
+  assert.equal(result, "{title: A Song}\n{key: G}\n[C]Some lyrics");
+}
+
+{
+  // CRLF is preserved for the line it actually touches — no wholesale
+  // normalisation of the rest of the file (st_directive.js's own
+  // "operate on the original text directly" discipline, SPEC.md §15).
+  const result = insertKeyDirective("{t: A Song}\r\n[C]Some lyrics\r\n", "Em");
+  assert.equal(result, "{t: A Song}\r\n{key: Em}\n[C]Some lyrics\r\n");
+}
+
+{
+  // No title line at all: the directive goes at the very top instead.
+  const result = insertKeyDirective("[C]Just chords, no title", "C");
+  assert.equal(result, "{key: C}\n[C]Just chords, no title");
+}
+
+{
+  // Edge case: the title line is the entire file, with no trailing newline
+  // of its own to split on — a naive splice would glue the two directives
+  // together with no separator at all.
+  const result = insertKeyDirective("{title: Only Line}", "D");
+  assert.equal(result, "{title: Only Line}\n{key: D}\n");
 }
 
 console.log("test-chordpro-crate.mjs: all assertions passed.");

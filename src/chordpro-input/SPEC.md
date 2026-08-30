@@ -370,6 +370,7 @@ a real setlist file's own path can never look like (a "#" isn't valid in one).
 | transpose value | `custom:transpose` | custom |
 | this plugin's confidence in a match | `custom:matchStatus` | custom |
 | every candidate when a match was ambiguous, closest-in-the-tree first | `custom:matchCandidates` | custom (SPEC.md §16) |
+| whether a song's `musicalKey` was guessed, human-confirmed, or never touched at all | `custom:keyStatus` | custom (SPEC.md §17) — absent for an authored `{key:}`, same "present only when it means something" convention as `custom:matchCandidates` |
 
 `rdf:Property` definitions are added only when at least one entity in the build actually
 uses them:
@@ -380,6 +381,7 @@ uses them:
 | `arcp://name,custom/terms#transpose` | Transpose |
 | `arcp://name,custom/terms#matchStatus` | Match Status |
 | `arcp://name,custom/terms#matchCandidates` | Match Candidates |
+| `arcp://name,custom/terms#keyStatus` | Key Status |
 
 (`name`, `text`, `musicalKey`, `composer`, `performer`, `subtitle`, `hasPart`,
 `specializationOf` are standard schema.org properties already defined by every profile's base
@@ -419,7 +421,14 @@ src/chordpro-input/
   test-songbook-html.mjs       unit/integration tests for songbook_html.js
   st_directive.js              isomorphic {st:} match/rewrite core — see §15
   fix_st_directive_ui.js       browser-only shell (folder walk, zip backup, write-back) — see §15
+  fix_st_directive_action.js    additive plugin wiring the above into a "kind: action" tile — §15
+  setlist_match_action.js       additive plugin: pre-build soft gate + review tile — see §16
+  existing_crate_prefill.js      additive plugin: "folder:picked" tap supplying ctx.crateJson
+                               for chaos2crate's own Describe-step prefill — see §17
+  key_review_action.js          additive plugin: "Review guessed keys…" tile, backup + write-
+                               back to the song files — see §17
   test-st-directive.mjs        unit tests for st_directive.js
+  test-existing-crate-prefill.mjs  unit tests for existing_crate_prefill.js
   build-songbook.mjs            standalone Node CLI: builds songbook.html with no browser/app
                                UI involved — see §10
 ```
@@ -1154,11 +1163,11 @@ It runs independently of the crate-building pipeline entirely.
 below. `fix_st_directive_ui.js` (the browser-only shell around that same core) is also
 implemented, but has no automated test of its own (it's a thin File System Access API shell —
 see its own header comment; exercising it needs a real browser, same caveat as this project's
-other browser-only code) — and, like §16's own review UI, was originally wired
-into `resources2crate`'s own `main.js`/`index.html` before this plugin's extraction into its
-own repo, and that wiring has not been ported into `chaos2crate`'s own `main.js`/`index.html`.
-Until some host does that wiring, `findStDirectiveHits`/`applyStDirectiveFixes` are exported,
-tested functions with nothing in a running app actually calling them.
+other browser-only code). Originally wired directly into `resources2crate`'s own
+`main.js`/`index.html`, before this plugin's extraction into its own repo — now wired instead
+via `fix_st_directive_action.js`, an ordinary additive plugin (`kind: "action"` optionSchema
+tile, `deps.openModal`) requiring no chaos2crate-side wiring of its own at all beyond what
+every plugin already gets (§16's own note has the fuller account of that mechanism).
 
 **Shared, isomorphic core.** `st_directive.js` is pure string-in/string-out logic — no file
 I/O — the same isomorphic split `crate.js`'s own header comment describes for a different
@@ -1223,15 +1232,19 @@ changed, occurrences, backup path) the same way the Build view logs its own resu
 **Status:** the data-side logic below (`rankCandidatesByPath`, `findAmbiguousSetlistMatches`,
 `extractReviewableSetlistMatches`, persisted-choice reuse, all in `chordpro_crate.js`) is fully
 implemented in this repo and covered by `test-chordpro-crate.mjs`. The UI it was designed
-for — `#setlistMatchModal`, the pre-build soft-gate review step, and the "Review setlist
-matches…" post-build editor — was originally wired directly into `resources2crate`'s own
-`main.js`/`index.html`, before this plugin was extracted into its own repo. That wiring has
-**not** been ported into `chaos2crate`'s own `main.js`/`index.html` — `buildCrate(ctx)` still
-accepts `ctx.options.setlistMatchOverrides` exactly as this section describes (§4/§16), so a
-host that wires the UI back up needs no further change to this plugin itself, but until some
-host does, every ambiguous match simply falls back to the path-proximity default with a
-build-log warning, and there is no way to review or override one. Porting this UI is a
-host-app integration task, not something tracked as a to-do of this plugin's own repo.
+for was originally wired directly into `resources2crate`'s own `main.js`/`index.html`, before
+this plugin was extracted into its own repo — describing what follows below (the tile UI, the
+pre-build soft gate, the two-modal split) as a design that still needed a *host* to wire up.
+It's since been rewired as `setlist_match_action.js`, an ordinary **additive** plugin sitting
+entirely on this repo's own side of the boundary: `deps.openModal` (a generic modal shell
+chaos2crate's own `src/plugins/deps.js` hands every plugin) plus an optionSchema tile of
+`kind: "action"` (`main.js`'s `renderOptionGroupTiles`, a plain button that calls the tile's
+own `run(runtime)` handler) are the only host capabilities either half of this feature needs —
+both already existed in chaos2crate for unrelated reasons, so nothing chaos2crate-specific had
+to be written or reviewed on that side at all. `#setlistMatchModal` below is now that same
+plugin's own in-memory modal, not a literal element id in `chaos2crate`'s `index.html`; "a host
+app's own UI" throughout this section now means this plugin's own action-tile UI, not
+something still waiting on a separate integration.
 
 `matchEntryToSong` (chordprobook, §6.1) can only report *that* an entry matched more than one
 song — it has no notion of file paths at all, so it has no principled way to prefer one
@@ -1394,7 +1407,107 @@ with no wrong outcome — even every tile left on its own default is still a san
 with, so its own × close icon is just a shortcut for "Build" (§16's own "soft gate" section,
 above). This modal is different: opening it and closing it without meaning to shouldn't
 silently rewrite a crate for no reason, so its × (and clicking the backdrop) is a genuine
-cancel — no patch, no rewrite, just a log line saying so. Both modes share one `#setlistMatchModal`
-and one `renderSetlistMatchTiles`; a module-level flag (`setlistMatchCloseCancels`) set by
-whichever opener is active is what the shared close handler checks to decide which behaviour
-applies.
+cancel — no patch, no rewrite, just a log line saying so. Both modes share one `deps.openModal`
+call and one `renderTiles` (`setlist_match_action.js`); each opener's own `onDismiss` (§3.1's
+own "action" tile design elsewhere in this doc) is what decides which behaviour applies —
+`collectPicks(tilesEl)` for the pre-build soft gate, a plain `null` for this one.
+
+## 17. Guessing a missing key, and reviewing the guess
+
+A song file with no `{key:}` directive at all gets one guessed for it, from chordprobook's own
+`guessKey()` (its own SPEC.md §3.9) reading the same song's `chordsUsed` this plugin already
+has parsed — no new parsing of its own, no UI required for a build to produce a usable
+`musicalKey` at all. "Review guessed keys…", an action tile of exactly the same
+`kind: "action"`/`deps.openModal` shape as §16's own "Review setlist matches…", is where a
+human confirms, overrides, or corrects one after the fact — reachable any time a crate already
+exists, entirely independent of whether a build happens in the current session, same as §16.
+
+**Why this exists.** Building this surfaced the actual reason a previously-typed root-dataset
+name wasn't sticking across rebuilds of the same folder (a separate, chaos2crate-side bug,
+`DEPLOY-SPEC.md`'s own history): chaos2crate's Describe-step prefill
+(`populateCrateDetailsFromExistingCrate`) has nothing to read unless some plugin taps
+`"folder:picked"` and supplies `ctx.crateJson` — and the one plugin that does, `c2c-plugins`'
+own `xlsx-crate-input`, isn't part of this deployment (`DEPLOY-SPEC.md` §3). Fixed there by
+`existing_crate_prefill.js`, a small additive plugin reading a plain `ro-crate-metadata.json`
+back for exactly that purpose. **This section's own persistence (below) does not reuse that
+plugin or its `ctx.crateJson`** — that `ctx` is a throwaway object built fresh inside
+`populateCrateDetailsFromExistingCrate` itself, on folder pick, long before a profile is even
+chosen; it never reaches `buildCrate(ctx)`'s own, later `ctx`. `chordpro_crate.js` reads
+`ro-crate-metadata.json` a second time, independently, direct from `rootHandle`, for its own
+narrower purpose — this is two call sites solving adjacent problems with the same underlying
+file, not one mechanism accidentally split in two.
+
+**Guessing and reuse, in `buildSongEntity`.** For a song whose own `{key:}` is present
+(`parsed.key`), nothing here applies at all — `musicalKey` is set from it directly, exactly as
+before this feature existed, and no `custom:keyStatus` is written. Only for a song with none:
+
+1. If a prior build's own crate already has a `musicalKey` for this exact song `@id`, carrying
+   a `custom:keyStatus` of `"guessed"` or `"confirmed"` — read via a plain, best-effort read of
+   `ro-crate-metadata.json` off `rootHandle` at the top of `buildCrateFromChordProFolder`
+   (absent, or not valid JSON, is treated the same as "nothing to reuse", not an error) — that
+   exact value and status are carried over unchanged. **The guesser does not run again.** This
+   is what makes a human's own reviewed choice (below) stick across rebuilds, the same way an
+   authored `{key:}` always has: once assigned, by a human or accepted as a guess, a key is
+   settled until something explicitly changes it.
+2. Otherwise, `guessKey(parsed.chordsUsed)` runs. If it returns anything, the first (best,
+   possibly tied — chordprobook's own SPEC.md §3.9) candidate's `key` becomes `musicalKey`, and
+   `custom:keyStatus` is set to `"guessed"`.
+3. If `guessKey()` returns nothing at all (no chord had a recognised quality — chordprobook's
+   own SPEC.md §3.9) — a lyrics-only file, say — `musicalKey` is left unset, same as an
+   authored file that simply never had a key. No `custom:keyStatus` either: there is nothing
+   guessed to flag.
+
+`custom:keyStatus` is a new `rdf:Property` (§7's own table), added only when at least one
+entity actually carries it (`addUsedPropertyDefinitions`, same discipline as
+`custom:matchStatus`/`custom:matchCandidates`). Its three meaningful values:
+
+| Value | Means |
+|---|---|
+| *(absent)* | The song's own `{key:}`, or no key at all — nothing this feature touched. |
+| `"guessed"` | Assigned by `guessKey()`, not yet looked at by a human. |
+| `"confirmed"` | A human opened the review tile and either accepted, changed, or hand-typed this value — never re-guessed again regardless of what the song's own chords do next. |
+
+**The review tile.** "Review guessed keys…" reads `ro-crate-metadata.json` fresh off disk
+(same convention as §16's own review action), and lists every canonical `MusicComposition`
+carrying a `custom:keyStatus` at all — `"guessed"` and `"confirmed"` alike, so a prior review
+can always be revisited, exactly as §16's own post-build editor never limits itself to
+still-unresolved entries either. For each: its title, its currently-assigned key, a short row
+of candidate keys re-derived on the spot (`new ChordProSong(entity.text)` then `.guessKey()` —
+the entity's own `text` is the song's full, verbatim source, chordprobook's own SPEC.md §3.1,
+so this needs no second read of the actual file) as clickable choices, and a plain text field —
+pre-filled with the current key, directly editable — for typing any key at all, not only one
+`guessKey()` itself proposed. Clicking a candidate fills the text field; nothing commits until
+"Save".
+
+On "Save", every listed song's own `musicalKey` is set to whatever its text field currently
+holds and its `custom:keyStatus` becomes `"confirmed"` — for every row shown, not only ones
+actually changed, since appearing in this list and being saved *is* the act of a human looking
+at it (unlike §16's own change-only patch, where an unreviewed default is still just as
+provisional after Save as before it). A field cleared to empty removes `musicalKey`/
+`custom:keyStatus` from that entity entirely, back to "no key assigned" — the one way to undo
+a guess rather than replace it with another one. `ro-crate-metadata.json` and `songbook.html`
+are rewritten directly from the patched JSON, same as §16, with no folder re-scan or pipeline
+re-run.
+
+**Writing the key back into the file itself.** A checkbox in the same modal, off by default:
+"Also add `{key:}` to the song files". When checked, every song actually saved with a
+non-empty key — `"confirmed"` only; a file already has no `{key:}` of its own by definition,
+so there is nothing to "add back" for one that was left `"guessed"` and not reviewed — gets a
+`{key: <value>}` line inserted directly after its own `{title:}`/`{t:}` line (or at the very
+top of the file, if it has neither), via a small, pure `insertKeyDirective(rawText, keyValue)`
+(`chordpro_crate.js`) that touches nothing else in the file — no re-tidying, no line-ending
+normalisation of anything outside the one inserted line, the same "operate on the original
+text directly" discipline `st_directive.js`'s own `applyChoices` follows (§15). Every affected
+file is backed up first, to a timestamped zip under `.chordpro-key-backups/` in the picked
+folder — a sibling convention to, but a separate folder from, §15's own
+`.chordpro-cleanup-backups/`, so the two tools' backups are never mixed together in one
+listing. Once written, the file has its own real `{key:}`: the next build reads it as
+authored, same as any other song that always had one — `custom:keyStatus` never appears for it
+again, and neither this feature nor the reuse rule above has anything further to do with it.
+
+**Deferred (not built):** a pre-build soft gate analogous to §16's own (guessed keys are never
+allowed to interrupt a build the way an unresolved setlist match can be made to); surfacing
+chordprobook's own richer per-candidate breakdown (`chordsInKey`/`chordsOutOfKey`/
+`ignoredChords`, its own SPEC.md §3.9) anywhere in the review tile itself, which currently
+shows only each candidate's bare key; any confidence threshold below which a guess is withheld
+rather than always assigning the top-scoring candidate regardless of how weak that score is.

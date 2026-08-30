@@ -11,7 +11,7 @@
 // duplicated here.
 
 import { ROCrate } from "ro-crate";
-import { ChordProSong, parseSetlist, matchEntryToSong } from "chordprobook";
+import { ChordProSong, parseSetlist, matchEntryToSong, guessKey } from "chordprobook";
 import { toArray, firstValue } from "./crate_index.js";
 
 export const DEFAULT_SONG_EXTENSIONS = [".pro", ".cho", ".cho.txt"];
@@ -53,6 +53,7 @@ const PROPERTY_DEFINITIONS = {
   "custom:transpose": { "@id": "arcp://name,custom/terms#transpose", "@type": "rdf:Property", name: "Transpose" },
   "custom:matchStatus": { "@id": "arcp://name,custom/terms#matchStatus", "@type": "rdf:Property", name: "Match Status" },
   "custom:matchCandidates": { "@id": "arcp://name,custom/terms#matchCandidates", "@type": "rdf:Property", name: "Match Candidates" },
+  "custom:keyStatus": { "@id": "arcp://name,custom/terms#keyStatus", "@type": "rdf:Property", name: "Key Status" },
 };
 
 /* ---------- directory walking (FileSystemDirectoryHandle) ---------- */
@@ -127,15 +128,72 @@ async function harvestFilesAndTitles(rootHandle, opts = {}) {
 
 /* ---------- Song entities (SPEC.md §5) ---------- */
 
+// Reads whichever ro-crate-metadata.json is already sitting in `rootHandle`,
+// if any — a plain, best-effort read, independent of chaos2crate's own
+// existing_crate_prefill.js (SPEC.md §17's own note on why the two don't
+// share this read: that plugin's own ctx never reaches buildCrate(ctx)'s).
+// Anything short of "valid JSON with a @graph" (missing file, corrupt JSON,
+// an unexpected shape) is treated as "nothing to reuse" rather than an
+// error — a first-ever build of a fresh folder hits this on every song.
+async function readExistingCrateJson(rootHandle) {
+  try {
+    for await (const entry of rootHandle.values()) {
+      if (entry.kind !== "file" || entry.name !== "ro-crate-metadata.json") continue;
+      const text = await (await entry.getFile()).text();
+      const json = JSON.parse(text);
+      return Array.isArray(json && json["@graph"]) ? json : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// @id -> { musicalKey, keyStatus } for every canonical song a prior build
+// already assigned a guessed-or-confirmed key to (SPEC.md §17) — songs with
+// an authored {key:} never appear here, since buildSongEntity never needs to
+// "reuse" one: it reads the file's own directive fresh, every time.
+function extractPersistedSongKeys(crateJson) {
+  const graph = Array.isArray(crateJson && crateJson["@graph"]) ? crateJson["@graph"] : [];
+  const persisted = {};
+  for (const entity of graph) {
+    if (!toArray(entity["@type"]).includes("MusicComposition")) continue;
+    if ("specializationOf" in entity || "custom:matchStatus" in entity) continue; // a setlist-entry proxy, not a canonical song
+    const keyStatus = firstValue(entity, "custom:keyStatus");
+    if (keyStatus !== "guessed" && keyStatus !== "confirmed") continue;
+    const musicalKey = firstValue(entity, "musicalKey");
+    if (!musicalKey) continue;
+    persisted[entity["@id"]] = { musicalKey, keyStatus };
+  }
+  return persisted;
+}
+
 // The canonical entity for one song file: the *only* place its full text
 // lives (schema:text) — every setlist entry that performs this song points
 // back here rather than carrying its own copy (see buildSetlistEntities).
-function buildSongEntity(relativePath, rawText, songExtensions) {
+function buildSongEntity(relativePath, rawText, songExtensions, persistedKeys = {}) {
   const parsed = new ChordProSong(rawText);
   const title = parsed.title || titleFromFilename(relativePath, songExtensions);
 
   const entity = { "@id": relativePath, "@type": "MusicComposition", name: title, text: rawText };
-  if (parsed.key) entity.musicalKey = parsed.key;
+  if (parsed.key) {
+    entity.musicalKey = parsed.key;
+  } else {
+    // SPEC.md §17: reuse a prior guess/confirmation before ever re-guessing
+    // — a human's own reviewed choice has to survive a rebuild the same way
+    // an authored {key:} always has.
+    const persisted = persistedKeys[relativePath];
+    if (persisted) {
+      entity.musicalKey = persisted.musicalKey;
+      entity["custom:keyStatus"] = persisted.keyStatus;
+    } else {
+      const guesses = guessKey(parsed.chordsUsed);
+      if (guesses.length) {
+        entity.musicalKey = guesses[0].key;
+        entity["custom:keyStatus"] = "guessed";
+      }
+    }
+  }
   // schema.org's `composer`/`performer` both expect a Person/Organization
   // reference; this plugin writes the ChordPro directive's free text
   // directly instead of minting a Person entity for either (SPEC.md §5) —
@@ -495,6 +553,59 @@ function buildSetlistEntities(relativePath, rawText, songs, setlistSuffix, overr
   return { setlistEntity, setEntities, entryEntities, matchStatuses };
 }
 
+/* ---------- key guessing and review (SPEC.md §17) ---------- */
+
+// Every canonical song carrying a custom:keyStatus at all — "guessed" and
+// "confirmed" alike, so a prior review is always revisitable, not only a
+// still-unreviewed guess (same convention as extractReviewableSetlistMatches,
+// above) — for the "Review guessed keys…" tile, read straight from a crate
+// already on disk. Candidates are re-derived on the spot from the entity's
+// own `text` (its full, verbatim source — SPEC.md §5/§7) via chordprobook's
+// own ChordProSong/guessKey, rather than trusting anything persisted in the
+// crate itself: this plugin doesn't persist the candidate breakdown at all
+// (SPEC.md §17's own "Deferred" note), and re-deriving is cheap regardless.
+export function extractReviewableSongKeys(crateJson) {
+  const graph = Array.isArray(crateJson && crateJson["@graph"]) ? crateJson["@graph"] : [];
+  const results = [];
+  for (const entity of graph) {
+    if (!toArray(entity["@type"]).includes("MusicComposition")) continue;
+    if ("specializationOf" in entity || "custom:matchStatus" in entity) continue;
+    const keyStatus = firstValue(entity, "custom:keyStatus");
+    if (keyStatus !== "guessed" && keyStatus !== "confirmed") continue;
+
+    const text = firstValue(entity, "text") || "";
+    const parsed = new ChordProSong(text);
+    results.push({
+      id: entity["@id"],
+      title: firstValue(entity, "name") || entity["@id"],
+      currentKey: firstValue(entity, "musicalKey") || "",
+      keyStatus,
+      candidates: guessKey(parsed.chordsUsed),
+    });
+  }
+  return results;
+}
+
+// Inserts `{key: <keyValue>}` directly after a song's own {title:}/{t:} line
+// (or at the very top of the file, if it has neither) — used only for a
+// song whose file has no {key:} of its own to begin with (SPEC.md §17), so
+// there is never an existing directive to find or replace, only a place to
+// add one. Touches nothing else in the file: no re-tidying, no line-ending
+// normalisation beyond the one inserted line — the same "operate on the
+// original text directly" discipline st_directive.js's own applyChoices
+// follows (SPEC.md §15), for the same reason: a write-back a human didn't
+// ask for, anywhere outside the one line this is actually changing, is a
+// worse outcome than a slightly odd edge case in how the new line joins in.
+export function insertKeyDirective(rawText, keyValue) {
+  const titleLineRe = /^[ \t]*\{[ \t]*(?:t|title)[ \t]*:[^}]*\}[ \t]*(\r?\n)?/im;
+  const match = rawText.match(titleLineRe);
+  const directiveLine = `{key: ${keyValue}}`;
+  if (!match) return `${directiveLine}\n${rawText}`;
+  const insertAt = match.index + match[0].length;
+  const prefix = match[1] ? "" : "\n"; // the title line had no trailing newline of its own to split on
+  return rawText.slice(0, insertAt) + prefix + directiveLine + "\n" + rawText.slice(insertAt);
+}
+
 /* ---------- rdf:Property definitions (SPEC.md §7) ---------- */
 
 function addUsedPropertyDefinitions(crate) {
@@ -553,6 +664,9 @@ export async function buildCrateFromChordProFolder(rootHandle, config, onProgres
 
   if (songFiles.length === 0 && setlistFiles.length === 0) return null;
 
+  const priorCrateJson = await readExistingCrateJson(rootHandle);
+  const persistedKeys = priorCrateJson ? extractPersistedSongKeys(priorCrateJson) : {};
+
   const crate = new ROCrate({ array: true, link: true });
   crate.addContext({ custom: "arcp://name,custom/terms#" });
   applyRootDataset(crate, config);
@@ -563,7 +677,7 @@ export async function buildCrateFromChordProFolder(rootHandle, config, onProgres
 
   for (const { relativePath } of songFiles) {
     const rawText = songTexts.get(relativePath);
-    const { entity, title } = buildSongEntity(relativePath, rawText, songExtensions);
+    const { entity, title } = buildSongEntity(relativePath, rawText, songExtensions, persistedKeys);
     crate.addEntity(entity);
     rootHasPart.push({ "@id": relativePath });
     onProgress(`  Song: ${relativePath} (${title})`);
