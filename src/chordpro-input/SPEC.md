@@ -427,6 +427,8 @@ src/chordpro-input/
                                for chaos2crate's own Describe-step prefill — see §17
   key_review_action.js          additive plugin: "Review guessed keys…" tile, backup + write-
                                back to the song files — see §17
+  normalize_capo_key_action.js  additive plugin: "Normalize capos and keys…" tile, backup +
+                               write-back to the song files — see §18
   test-st-directive.mjs        unit tests for st_directive.js
   test-existing-crate-prefill.mjs  unit tests for existing_crate_prefill.js
   build-songbook.mjs            standalone Node CLI: builds songbook.html with no browser/app
@@ -1537,3 +1539,80 @@ chordprobook's own richer per-candidate breakdown (`chordsInKey`/`chordsOutOfKey
 `ignoredChords`, its own SPEC.md §3.9) anywhere in the review tile itself, which currently
 shows only each candidate's bare key; any confidence threshold below which a guess is withheld
 rather than always assigning the top-scoring candidate regardless of how weak that score is.
+
+## 18. Normalizing a key charted "as heard" instead of "as played"
+
+This tool's own convention (`docs/chordpro-format.md`) is that `{key:}` is the *charted* key —
+what the chord shapes actually written down spell — and `{capo:}` is independent of it: the
+song's sounding key is the charted key transposed up by the capo. chordpro.org's own convention
+disagrees: there, `{key:}` is the key the song sounds in, capo included. A song built the
+chordpro.org way looks, from here, exactly like a chart in C shapes that someone mistyped as
+"D" — the two are genuinely indistinguishable from the chords alone; only the presence of both
+an authored `{key:}` *and* a `{capo:}` at all makes this worth checking. "Normalize capos and
+keys…" is a second action tile, of the same `kind: "action"`/`deps.openModal` shape as §16/§17's
+own review tiles, deliberately separate from "Review guessed keys…" rather than a checkbox on
+that tile — the two features answer different questions (§17: "what key is this, if none was
+given at all?" vs. this one: "does the key that *was* given actually mean what this tool expects
+it to mean?") over an almost entirely disjoint set of songs (only ever those with both a
+`{key:}` and a `{capo:}` already), and folding a whole second checkbox-per-song review flow onto
+the far more common single-guess tile would make that one harder to read for no shared benefit.
+
+**Detection, `detectCapoKeyMismatch(entity)` in `chordpro_crate.js`.** Only ever considers a
+song entity that already has both a `custom:capo` and a `musicalKey` — no capo, nothing to
+revert against; no key, nothing to compare (that's §17's own job instead). `guessKey()` runs
+again over the song's own `chordsUsed` (the entity's `text`, re-parsed fresh, same convention as
+§17's own candidate re-derivation), exactly as if this were a still-unguessed song. If the
+authored key is already among the top-scoring candidates, the chart agrees with itself as
+charted — nothing to flag. Otherwise, the authored key is transposed *down* by the capo amount
+(chordprobook's own `Transposer.transposeKey`) to get the key the chart would have to be in if
+the capo were the reason the guesser and the author disagree; only if *that* implied key is
+itself among the guesser's top candidates is this flagged as a likely as-heard mistake, with
+`{currentKey, suggestedKey, suggestedTranspose: "+<capo>", capo}` — `suggestedTranspose` is
+always positive, since it exists only to recover the sounding key the capo's own upward shift
+already reaches from the (lower) charted key. `extractCapoKeyMismatches(crateJson)` applies this
+to every canonical `MusicComposition` in a crate already on disk, the same read-straight-off-disk
+convention as `extractReviewableSongKeys`.
+
+**The tile.** For each detected mismatch: the song's title, its own chords (same reasoning as
+§17's own chord display — evidence to judge the suggestion against, not a bare claim to take on
+faith), and a plain summary of the fix (`key: D, capo: 2` → `key: C, transpose: +2, capo: 2
+(unchanged)`) next to a checkbox, **checked by default** — every detection this algorithm
+surfaces is already a fairly specific coincidence (the chart's own top-scoring guess, the
+authored key, and the capo amount all lining up at once), so a false positive here is expected
+to be rare enough that defaulting to "apply it" costs less than making every user manually tick
+songs that are, in the overwhelming majority of cases, exactly what they look like. Unticking a
+song leaves it untouched entirely — no different from Cancel, for that one song alone. On
+"Save", every still-ticked song's own `musicalKey`/`custom:transpose` are set directly in the
+crate (the `{key:}`/`{capo:}` role split this whole feature exists to restore); `capo` itself is
+never touched, since it was already correct — capped up 2 frets was always the physically true
+thing, only the label on which key that produces was ever wrong.
+
+**Writing the fix back into the file itself.** A checkbox in the same modal, off by default,
+mirroring §17's own: "Also rewrite `{key:}` and `{transpose:}` in the song files (backs up
+originals first)". Unlike §17 (where an unset `{key:}` always means inserting a brand-new
+line), both directives here already exist in the file, so this always **replaces in place**
+rather than inserting — `setDirectiveValue(rawText, directiveNames, value)`, a new
+counterpart to `insertKeyDirective` sharing its own `insertDirectiveAfterTitle` helper, given a
+list of acceptable spellings (`["transpose", "tr"]`, since either is valid chordpro and a given
+file might use only one) so it finds and replaces whichever alias the file actually has, falling
+back to inserting only if neither is present at all. `{key:}` is always present already (this
+feature never fires without one), so its own replace path is always taken. Backups go to their
+own timestamped zip under `.chordpro-normalize-backups/` — a third, separate backup folder
+alongside §15's `.chordpro-cleanup-backups/` and §17's `.chordpro-key-backups/`, so no tool's
+backups are ever mixed into another's listing.
+
+**A crate-only fix does not survive a rebuild.** `buildSongEntity` (§17) always trusts an
+authored `{key:}` over anything persisted from a prior crate — the whole reuse mechanism §17
+relies on only ever activates for a song with *no* `{key:}` at all. A song fixed here in the
+crate alone, with the write-back checkbox left unticked, still has its old, "wrong" `{key:}` on
+disk; the very next rebuild reads that file fresh and reintroduces the exact same mismatch,
+which the next run of this tile will simply flag and offer to fix again. This is a known,
+accepted limitation rather than a bug to engineer around: the file itself, not the crate, is
+this tool's actual source of truth for an authored key (§5), and the write-back checkbox is the
+one mechanism that changes what the file itself says — same as §17's own `{key:}` write-back
+being what actually stops a guess from being re-derived.
+
+**Deferred (not built):** any equivalent of §17's own `custom:keyStatus` tracking for this
+feature — a fixed song looks, to a rebuild, identical to one that was always charted correctly,
+which is only a problem in combination with the crate-only-fix limitation just above; a
+pre-build soft gate analogous to §16's own.

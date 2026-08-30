@@ -10,6 +10,7 @@ import { ChordProSong, guessKey } from "chordprobook";
 import {
   buildCrateFromChordProFolder, rankCandidatesByPath, findAmbiguousSetlistMatches, extractPersistedSetlistMatches,
   extractReviewableSetlistMatches, extractReviewableSongKeys, insertKeyDirective,
+  extractCapoKeyMismatches, setDirectiveValue,
 } from "./chordpro_crate.js";
 
 const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "samples");
@@ -784,6 +785,80 @@ function threeWayAmbiguousTree() {
   assert.equal(item.currentKey, guessKey(new ChordProSong(text).chordsUsed)[0].key);
   assert.ok(Array.isArray(item.candidates) && item.candidates.length);
   assert.deepEqual(item.chordsUsed, ["C", "F", "G"]);
+}
+
+/* ---------- extractCapoKeyMismatches / detectCapoKeyMismatch (SPEC.md §18) ---------- */
+
+{
+  // The motivating case: a chart written in C shapes, capped up 2, but
+  // typed up as {key: D} the chordpro.org way (key = what it sounds like) —
+  // this tool's own convention (docs/chordpro-format.md) instead expects
+  // {key:} to be the charted key, independent of {capo:}. C major and its
+  // relative A minor tie for best coverage over C/F/G/Am (chordprobook's
+  // own SPEC.md §3.9 relative-major/minor tie behaviour) — detection only
+  // needs the implied charted key (D transposed down 2 = C) to be *among*
+  // the tied candidates, not the sole winner.
+  const tree = {
+    "song.cho.txt": Buffer.from("{title: Test Song}\n{key: D}\n{capo: 2}\n[C]Some [F]lyrics [G]here [Am]too"),
+  };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const crateJson = result.crate.toJSON();
+
+  const mismatches = extractCapoKeyMismatches(crateJson);
+  assert.equal(mismatches.length, 1);
+  const [item] = mismatches;
+  assert.equal(item.id, "song.cho.txt");
+  assert.equal(item.currentKey, "D");
+  assert.equal(item.suggestedKey, "C");
+  assert.equal(item.suggestedTranspose, "+2");
+  assert.equal(item.capo, 2);
+  assert.deepEqual(item.chordsUsed, ["C", "F", "G", "Am"]);
+}
+
+{
+  // No capo at all: nothing to revert against, regardless of what the
+  // chords say — capo-independence is the whole point of this tool's own
+  // {key:}/{capo:} split, so a keyless-of-capo song is never a candidate.
+  const tree = {
+    "song.cho.txt": Buffer.from("{title: Test Song}\n{key: D}\n[C]Some [F]lyrics [G]here [Am]too"),
+  };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const mismatches = extractCapoKeyMismatches(result.crate.toJSON());
+  assert.equal(mismatches.length, 0);
+}
+
+{
+  // The authored key already agrees with the chords as charted — a real
+  // capo'd song charted the way this tool actually expects, not a mismatch.
+  const tree = {
+    "song.cho.txt": Buffer.from("{title: Test Song}\n{key: C}\n{capo: 2}\n[C]Some [F]lyrics [G]here [Am]too"),
+  };
+  const result = await buildCrateFromChordProFolder(memoryDirHandle("root", tree), {}, () => {});
+  const mismatches = extractCapoKeyMismatches(result.crate.toJSON());
+  assert.equal(mismatches.length, 0);
+}
+
+/* ---------- setDirectiveValue (SPEC.md §18) ---------- */
+
+{
+  // Replaces an existing directive's value in place, keeping its own
+  // spelling and touching nothing else on the line.
+  const result = setDirectiveValue("{title: A Song}\n{key: D}\n[C]Some lyrics", ["key"], "C");
+  assert.equal(result, "{title: A Song}\n{key: C}\n[C]Some lyrics");
+}
+
+{
+  // Alias support: finds "tr" when "transpose" is the name being searched
+  // for's alternate spelling, and keeps that same spelling on replace.
+  const result = setDirectiveValue("{title: A Song}\n{tr: -2}\n[C]Some lyrics", ["transpose", "tr"], "+2");
+  assert.equal(result, "{title: A Song}\n{tr: +2}\n[C]Some lyrics");
+}
+
+{
+  // Neither alias present at all: falls back to inserting after the title
+  // line, using the first name given as the spelling to insert.
+  const result = setDirectiveValue("{title: A Song}\n[C]Some lyrics", ["transpose", "tr"], "+2");
+  assert.equal(result, "{title: A Song}\n{transpose: +2}\n[C]Some lyrics");
 }
 
 /* ---------- insertKeyDirective (SPEC.md §17) ---------- */

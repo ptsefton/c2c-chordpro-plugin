@@ -12,7 +12,8 @@
     "fixSt=c2c-chordpro-plugin/src/chordpro-input/fix_st_directive_action.js",
     "setlistMatch=c2c-chordpro-plugin/src/chordpro-input/setlist_match_action.js",
     "cratePrefill=c2c-chordpro-plugin/src/chordpro-input/existing_crate_prefill.js",
-    "keyReview=c2c-chordpro-plugin/src/chordpro-input/key_review_action.js"
+    "keyReview=c2c-chordpro-plugin/src/chordpro-input/key_review_action.js",
+    "normalizeCapoKey=c2c-chordpro-plugin/src/chordpro-input/normalize_capo_key_action.js"
   ],
 
   "demo": [

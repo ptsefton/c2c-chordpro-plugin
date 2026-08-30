@@ -11,7 +11,7 @@
 // duplicated here.
 
 import { ROCrate } from "ro-crate";
-import { ChordProSong, parseSetlist, matchEntryToSong, guessKey } from "chordprobook";
+import { ChordProSong, parseSetlist, matchEntryToSong, guessKey, Transposer } from "chordprobook";
 import { toArray, firstValue } from "./crate_index.js";
 
 export const DEFAULT_SONG_EXTENSIONS = [".pro", ".cho", ".cho.txt"];
@@ -591,24 +591,98 @@ export function extractReviewableSongKeys(crateJson) {
   return results;
 }
 
-// Inserts `{key: <keyValue>}` directly after a song's own {title:}/{t:} line
-// (or at the very top of the file, if it has neither) — used only for a
-// song whose file has no {key:} of its own to begin with (SPEC.md §17), so
-// there is never an existing directive to find or replace, only a place to
-// add one. Touches nothing else in the file: no re-tidying, no line-ending
+// Detects a song where the chord shapes actually written down don't match
+// the charted `{key:}` a human typed, but DO match that key transposed down
+// by the song's own `{capo:}` — i.e. someone charted in (say) C, capped up
+// 2 frets, and typed "D" as the key because D is what comes out the
+// speaker, rather than following this tool's own convention (docs/
+// chordpro-format.md: `{key:}` is the charted/shape key, capo is
+// independent, sounding key = charted key transposed by capo). Only ever
+// flags songs that already have both an authored key AND a capo — no
+// capo, nothing to revert against; no key, nothing to compare (that's
+// extractReviewableSongKeys' own job instead, above).
+export function detectCapoKeyMismatch(entity) {
+  const capo = parseInt(firstValue(entity, "custom:capo"), 10);
+  if (!Number.isInteger(capo) || capo <= 0) return null;
+  const authoredKey = firstValue(entity, "musicalKey");
+  if (!authoredKey) return null;
+  const text = firstValue(entity, "text") || "";
+  const parsed = new ChordProSong(text);
+  const guesses = guessKey(parsed.chordsUsed);
+  if (!guesses.length) return null;
+  // The chords already agree with the authored key as written — nothing to fix.
+  if (guesses.some((g) => g.key === authoredKey)) return null;
+  const impliedChartedKey = Transposer.transposeKey(authoredKey, -capo);
+  if (!impliedChartedKey) return null;
+  // The chords only make sense as the authored key shifted down by the
+  // capo — i.e. this song's real charted key — do they agree with THAT?
+  if (!guesses.some((g) => g.key === impliedChartedKey)) return null;
+  return { currentKey: authoredKey, suggestedKey: impliedChartedKey, suggestedTranspose: `+${capo}`, capo };
+}
+
+// Same read-straight-from-the-on-disk-crate convention as
+// extractReviewableSongKeys, above — for the "Normalize capos and keys…"
+// tile (SPEC.md §18). Only canonical MusicComposition song entities are
+// candidates (never a setlist entry's own capo override), same filter
+// extractReviewableSongKeys applies.
+export function extractCapoKeyMismatches(crateJson) {
+  const graph = Array.isArray(crateJson && crateJson["@graph"]) ? crateJson["@graph"] : [];
+  const results = [];
+  for (const entity of graph) {
+    if (!toArray(entity["@type"]).includes("MusicComposition")) continue;
+    if ("specializationOf" in entity || "custom:matchStatus" in entity) continue;
+    const mismatch = detectCapoKeyMismatch(entity);
+    if (!mismatch) continue;
+    const text = firstValue(entity, "text") || "";
+    const parsed = new ChordProSong(text);
+    results.push({
+      id: entity["@id"],
+      title: firstValue(entity, "name") || entity["@id"],
+      chordsUsed: parsed.chordsUsed,
+      ...mismatch,
+    });
+  }
+  return results;
+}
+
+// Inserts `{<directiveName>: <value>}` directly after a song's own
+// {title:}/{t:} line (or at the very top of the file, if it has neither).
+// Touches nothing else in the file: no re-tidying, no line-ending
 // normalisation beyond the one inserted line — the same "operate on the
 // original text directly" discipline st_directive.js's own applyChoices
 // follows (SPEC.md §15), for the same reason: a write-back a human didn't
 // ask for, anywhere outside the one line this is actually changing, is a
 // worse outcome than a slightly odd edge case in how the new line joins in.
-export function insertKeyDirective(rawText, keyValue) {
+function insertDirectiveAfterTitle(rawText, directiveName, value) {
   const titleLineRe = /^[ \t]*\{[ \t]*(?:t|title)[ \t]*:[^}]*\}[ \t]*(\r?\n)?/im;
   const match = rawText.match(titleLineRe);
-  const directiveLine = `{key: ${keyValue}}`;
+  const directiveLine = `{${directiveName}: ${value}}`;
   if (!match) return `${directiveLine}\n${rawText}`;
   const insertAt = match.index + match[0].length;
   const prefix = match[1] ? "" : "\n"; // the title line had no trailing newline of its own to split on
   return rawText.slice(0, insertAt) + prefix + directiveLine + "\n" + rawText.slice(insertAt);
+}
+
+// Used only for a song whose file has no {key:} of its own to begin with
+// (SPEC.md §17), so there is never an existing directive to find or
+// replace, only a place to add one.
+export function insertKeyDirective(rawText, keyValue) {
+  return insertDirectiveAfterTitle(rawText, "key", keyValue);
+}
+
+// Replaces an existing directive's value in place — trying every name in
+// `directiveNames` in turn (e.g. ["transpose", "tr"], since either spelling
+// is valid chordpro and this must find whichever one a given file actually
+// uses — SPEC.md §18), keeping the directive's own original spelling/casing
+// and touching nothing else on the line. Falls back to
+// insertDirectiveAfterTitle (using the first name as the canonical spelling
+// to insert) only when none of the aliases are present at all.
+export function setDirectiveValue(rawText, directiveNames, value) {
+  const names = Array.isArray(directiveNames) ? directiveNames : [directiveNames];
+  const namesPattern = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const directiveRe = new RegExp(`^([ \t]*\{[ \t]*(?:${namesPattern})[ \t]*:)[^}]*(\})`, "im");
+  if (directiveRe.test(rawText)) return rawText.replace(directiveRe, `$1 ${value}$2`);
+  return insertDirectiveAfterTitle(rawText, names[0], value);
 }
 
 /* ---------- rdf:Property definitions (SPEC.md §7) ---------- */
