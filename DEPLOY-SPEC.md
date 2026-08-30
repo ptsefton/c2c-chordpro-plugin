@@ -78,7 +78,8 @@ No plugin source file changes.
     "ro-crate-json-output",
     "songbook=c2c-chordpro-plugin/src/chordpro-input/songbook_html.js",
     "fixSt=c2c-chordpro-plugin/src/chordpro-input/fix_st_directive_action.js",
-    "setlistMatch=c2c-chordpro-plugin/src/chordpro-input/setlist_match_action.js"
+    "setlistMatch=c2c-chordpro-plugin/src/chordpro-input/setlist_match_action.js",
+    "cratePrefill=c2c-chordpro-plugin/src/chordpro-input/existing_crate_prefill.js"
   ],
 
   // Each entry renders one folder to site/<path>/.

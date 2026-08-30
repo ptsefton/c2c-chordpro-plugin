@@ -91,7 +91,20 @@ syntax).
 - The `inputMode` select in `CORE_SETTINGS_SCHEMA` (`chaos2crate`'s own `src/main.js`) is
   derived from whichever input-mode plugins a given build actually selected (`INPUT_PLUGINS`,
   from `src/plugins/index.js`) — adding an external mode like this one needs no edit there.
-- No MASP profile currently sets `buildOptions.inputMode: "chordpro"` (§9).
+- `existing_crate_prefill.js` exports its own `createPlugin(deps)` too, for an additive tap
+  on the literal `"folder:picked"` hook string. Reads `ro-crate-metadata.json` out of the
+  picked folder, if one is already there, into `ctx.crateJson`/`ctx.crateSourceLabel` — the
+  chordpro-only equivalent of `c2c-plugins`' own `xlsx-crate-input`, which is the *only*
+  plugin that taps this hook and isn't part of this deployment's own plugin selection
+  (DEPLOY-SPEC.md §3). Without it, chaos2crate's own Describe-step prefill
+  (`populateCrateDetailsFromExistingCrate`) has nothing to read, so a folder already built
+  once — with a root-dataset name typed over the raw-folder-name default — silently forgets
+  that choice on every later visit to Describe, reverting to the default each time. No-ops
+  harmlessly if another tap already supplied `ctx.crateJson`, and if the folder has no
+  `ro-crate-metadata.json` yet (a first-ever build).
+- `Language-Research-Technology/c2c-masp-profiles`' own `chordpro-songs` profile sets
+  `buildOptions.inputMode: "chordpro"` (superseding this section's own earlier note that none
+  did) — see DEPLOY-SPEC.md §3a for how a bare visit to this deployment gets forced onto it.
 
 ## 4. File discovery
 
@@ -455,8 +468,9 @@ person writing song/setlist files, has not yet been written.
    parsed text — is required, given the crate currently stores only parsed text.
 3. Duplicate or near-duplicate song titles from different files are not deduplicated or
    cross-referenced in any way; they simply coexist as unrelated entities.
-4. No MASP profile currently selects `inputMode: "chordpro"` (§3), so an end-to-end build
-   requires manual configuration in Settings.
+4. ~~No MASP profile currently selects `inputMode: "chordpro"`~~ — `c2c-masp-profiles`' own
+   `chordpro-songs` now does (§3); an end-to-end build against the bundled default profile
+   still requires manual configuration in Settings, same as before.
 
 
 ---
