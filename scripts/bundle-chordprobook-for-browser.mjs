@@ -26,8 +26,10 @@ const outputFile = path.join(outputDir, "chordprobook_browser_bundle.js");
 
 // Order matters: ChordDiagram.js and Song.js's own source both reference
 // Transposer (as a bare global, once stripped of its import), so Transposer
-// must be defined first in the concatenated output.
-const FILES = ["chords/Transposer.js", "chords/ChordDiagram.js", "ChordProSong.js", "Song.js"];
+// must be defined first in the concatenated output; ChordProSong.js
+// references KeyGuesser's own guessKey() the same way, so that has to
+// precede it too.
+const FILES = ["chords/Transposer.js", "chords/ChordDiagram.js", "chords/KeyGuesser.js", "ChordProSong.js", "Song.js"];
 
 // Transforms one file's ES module source into a top-level
 //   var { PublicName, ... } = (function () { <module body> return { PublicName, ... }; })();
