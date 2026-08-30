@@ -709,6 +709,31 @@ are, so as the first content, `#song-header` lands at the top of the *left* colu
 avoid-column` (keeping title and key/capo together as one unit rather than letting the
 column break fall between them).
 
+Both selects are populated from a `ChordProSong` parsed fresh from the song's own `text` at
+render time — via `parseSongForRender(song)`, not a bare `new ChordProSong(song.text)` (every
+call site that renders or prints a song uses this). The difference matters once a key can come
+from somewhere other than the file's own `{key:}` directive (§17): the song list's own key tag
+reads `musicalKey` directly off the crate entity, so a guessed key already shows there
+correctly, but a *fresh* parse of unchanged text — which is all `song.text` ever is, until a
+human writes a guess back into the file itself (§17) — has no `{key:}` to find. Before
+`parseSongForRender` existed this was a real, reported bug: the key showed correctly wherever
+something read the crate directly, but `populateCapoSelect`'s own "N - (key shapes)" labels,
+which need `parsedSong.key` specifically, fell into the no-key branch instead and showed bare
+"Capo N". `parseSongForRender` fills `parsedSong.key` from the song's own `rawKey` (the crate's
+resolved value) whenever the text itself has none, so every selector downstream —
+`populateKeySelect`, `populateCapoSelect`, `renderSong`'s own `effectiveKey` — agrees with what
+the list already shows, without needing the file to have been rewritten first.
+
+**A key with no chords to transpose.** A chart can carry a `{key:}` purely as a reminder to the
+performer — a reading/lyrics-only page, no chord brackets anywhere — in which case
+`populateKeySelect`/`populateCapoSelect` both still return immediately on `!parsedSong.hasChords`
+(there is nothing to transpose, so offering a dropdown that would do nothing is actively
+misleading), but the key itself is worth keeping visible regardless: `#song-key-static`, a
+plain `<span>` sitting where `#key-select` would otherwise go, shows `"Key: <value>"` as static
+text whenever `parsedSong.key` is set and there are no chords, and stays hidden — same as
+`#key-select` itself — when there's no key either. `#capo-select` gets no equivalent: a capo
+choice without any chord shapes to apply it to has nothing left to mean.
+
 `#song-header` is `flex-wrap: nowrap` — title, key, and capo always stay on one row, never
 wrapping onto a second. What actually guarantees that fits is `fitSongHeaderTitle()`, called
 at the end of `fitSongContent` once the song's own font-size (and, through it, key/capo's
@@ -1471,13 +1496,14 @@ entity actually carries it (`addUsedPropertyDefinitions`, same discipline as
 (same convention as §16's own review action), and lists every canonical `MusicComposition`
 carrying a `custom:keyStatus` at all — `"guessed"` and `"confirmed"` alike, so a prior review
 can always be revisited, exactly as §16's own post-build editor never limits itself to
-still-unresolved entries either. For each: its title, its currently-assigned key, a short row
-of candidate keys re-derived on the spot (`new ChordProSong(entity.text)` then `.guessKey()` —
-the entity's own `text` is the song's full, verbatim source, chordprobook's own SPEC.md §3.1,
-so this needs no second read of the actual file) as clickable choices, and a plain text field —
-pre-filled with the current key, directly editable — for typing any key at all, not only one
-`guessKey()` itself proposed. Clicking a candidate fills the text field; nothing commits until
-"Save".
+still-unresolved entries either. For each: its title, the song's own chords (`chordsUsed`,
+re-derived the same way as the candidates below — the actual evidence a guess rests on, not
+just a bare key name to take on faith), a short row of candidate keys re-derived on the spot
+(`new ChordProSong(entity.text)` then `.guessKey()` — the entity's own `text` is the song's
+full, verbatim source, chordprobook's own SPEC.md §3.1, so this needs no second read of the
+actual file) as clickable choices, and a plain text field — pre-filled with the current key,
+directly editable — for typing any key at all, not only one `guessKey()` itself proposed.
+Clicking a candidate fills the text field; nothing commits until "Save".
 
 On "Save", every listed song's own `musicalKey` is set to whatever its text field currently
 holds and its `custom:keyStatus` becomes `"confirmed"` — for every row shown, not only ones

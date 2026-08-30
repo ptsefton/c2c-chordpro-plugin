@@ -60,6 +60,34 @@ const NO_KEY_SONG = {
   "@id": "no-key.cho.txt", "@type": "MusicComposition", name: "No Key Song",
   text: "{title: No Key Song}\n\n[G]Chords [D]but no key directive",
 };
+// musicalKey set (a guessed or human-confirmed key, chordpro_crate.js's own
+// SPEC.md §17), but no {key:} in the text itself — the song list already
+// reads musicalKey directly and shows this correctly; parseSongForRender is
+// what makes populateKeySelect/populateCapoSelect see it too, rather than
+// falling into NO_KEY_SONG's own "no key at all" branch above just because
+// the file hasn't been written back to yet. This was a real, reported bug:
+// the key showed right, but the capo dropdown's own "N - (key shapes)"
+// labels didn't, since they need parsedSong.key specifically, not
+// song.rawKey.
+const GUESSED_KEY_SONG = {
+  "@id": "guessed-key.cho.txt", "@type": "MusicComposition", name: "Guessed Key Song",
+  musicalKey: "G", "custom:keyStatus": "guessed",
+  text: "{title: Guessed Key Song}\n\n[G]Chords [D]with a [C]guessed key",
+};
+// A key, but genuinely no chords at all — a lyrics/reading chart. The
+// performer may still want the key as a reminder even though there's
+// nothing here to transpose (PT's own report) — shown as static text, not
+// a dropdown offering a choice that would do nothing.
+const KEY_NO_CHORDS_SONG = {
+  "@id": "key-no-chords.cho.txt", "@type": "MusicComposition", name: "Key No Chords Song",
+  text: "{title: Key No Chords Song}\n{key: A}\n\nJust the words, no chords anywhere.",
+};
+// Neither a key nor any chords — nothing to show at all, static or
+// otherwise.
+const NO_KEY_NO_CHORDS_SONG = {
+  "@id": "no-key-no-chords.cho.txt", "@type": "MusicComposition", name: "No Key No Chords Song",
+  text: "{title: No Key No Chords Song}\n\nJust the words, no key, no chords.",
+};
 // A flat-spelled key — PT reported the capo dropdown showing "1" as the
 // same key as the root for a real song like this one (see
 // Transposer.transposeKey's own fix, chordprobook/src/chords/Transposer.js).
@@ -458,6 +486,7 @@ function fakeDocument(crateJson, { rejectFullscreen = false } = {}) {
     "menu-bar-overflow-toggle": makeElement(),
     "menu-bar-overflow": makeElement(),
     "song-view-title": makeElement(),
+    "song-key-static": makeElement(),
     "song-content": makeElement(),
     "song-header": makeElement(),
     "song-pages": makeElement(),
@@ -768,6 +797,54 @@ function isHidden(element) {
   // shapes)" here (transposeKey(null, ...) returns null) — a gap in the
   // original worth not reproducing, not a behaviour to port faithfully.
   assert.equal(elements["capo-select"].children[2].textContent, "Capo 2");
+}
+
+{
+  // A guessed key (musicalKey set, no {key:} in the text) drives the key
+  // select exactly as an authored one would — real note-name options, not
+  // NO_KEY_SONG's own +N fallback above — and the capo select gets real
+  // "N - (key shapes)" labels, not bare "Capo N". This is the reported bug:
+  // before parseSongForRender, the song list already showed "G" correctly
+  // (it reads musicalKey directly) but the capo dropdown fell straight into
+  // the no-key branch, since a fresh ChordProSong parse of the unchanged
+  // text alone has no {key:} to find.
+  const { doc, elements } = fakeDocument({ "@graph": [GUESSED_KEY_SONG] });
+  initSongbookApp(doc, fakeWindow());
+  songLink(elements, 0).click();
+
+  const keySelect = elements["key-select"];
+  assert.equal(isHidden(keySelect), false);
+  assert.deepEqual(keySelect.children.map((o) => o.textContent), Transposer.notes);
+  assert.equal(keySelect.children[Transposer.notes.indexOf("G")].selected, true);
+
+  const capoOption2 = elements["capo-select"].children[2];
+  assert.equal(capoOption2.textContent, `2 - (${Transposer.transposeKey("G", -2)} shapes)`);
+}
+
+{
+  // A key, but no chords at all: the dropdown stays hidden (nothing to
+  // transpose), but the key itself still shows, as static text, purely as a
+  // reminder to the performer (PT's own report) — not offered as a choice
+  // that would do nothing.
+  const { doc, elements } = fakeDocument({ "@graph": [KEY_NO_CHORDS_SONG] });
+  initSongbookApp(doc, fakeWindow());
+  songLink(elements, 0).click();
+
+  assert.equal(isHidden(elements["key-select"]), true);
+  assert.equal(isHidden(elements["song-key-static"]), false);
+  assert.equal(elements["song-key-static"].textContent, "Key: A");
+}
+
+{
+  // Neither a key nor any chords: nothing to show at all, static or
+  // otherwise — the empty case KEY_NO_CHORDS_SONG's own test above doesn't
+  // cover.
+  const { doc, elements } = fakeDocument({ "@graph": [NO_KEY_NO_CHORDS_SONG] });
+  initSongbookApp(doc, fakeWindow());
+  songLink(elements, 0).click();
+
+  assert.equal(isHidden(elements["key-select"]), true);
+  assert.equal(isHidden(elements["song-key-static"]), true);
 }
 
 {

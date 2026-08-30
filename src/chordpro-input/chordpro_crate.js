@@ -580,6 +580,11 @@ export function extractReviewableSongKeys(crateJson) {
       title: firstValue(entity, "name") || entity["@id"],
       currentKey: firstValue(entity, "musicalKey") || "",
       keyStatus,
+      // The song's own chords, first-occurrence order (chordprobook's own
+      // SPEC.md §3.1) — shown alongside the candidates in the review tile
+      // so a reviewer has something to actually judge a guess against,
+      // rather than choosing blind between bare key names.
+      chordsUsed: parsed.chordsUsed,
       candidates: guessKey(parsed.chordsUsed),
     });
   }

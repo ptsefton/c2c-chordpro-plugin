@@ -32,7 +32,8 @@ function ensureStylesInjected() {
   style.textContent = `
     .ckr-tile { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; background: var(--panel-2); }
     .ckr-tile:last-child { margin-bottom: 0; }
-    .ckr-tile-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+    .ckr-tile-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .ckr-tile-chords { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-bottom: 8px; }
     .ckr-candidates { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .ckr-candidate-pill {
       border: 1px solid var(--border); border-radius: 999px; background: var(--panel);
@@ -55,6 +56,17 @@ function renderTiles(body, items) {
     title.className = "ckr-tile-title";
     title.textContent = item.title;
     tile.appendChild(title);
+
+    if (item.chordsUsed.length) {
+      // The actual evidence a guess is based on — without this, choosing
+      // between candidates (or typing a key of your own) means judging bare
+      // key names blind, with nothing of the song itself to check them
+      // against.
+      const chords = document.createElement("div");
+      chords.className = "ckr-tile-chords";
+      chords.textContent = `Chords: ${item.chordsUsed.join(", ")}`;
+      tile.appendChild(chords);
+    }
 
     const input = document.createElement("input");
     input.type = "text";

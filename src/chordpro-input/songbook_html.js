@@ -288,6 +288,28 @@ export function initSongbookApp(document, window) {
     return transposerInput.key;
   }
 
+  // A ChordProSong parsed fresh from a song's own text, with the crate's
+  // own resolved key (song.rawKey — either the song's authored {key:}, or a
+  // guessed/human-confirmed one chordpro_crate.js assigned server-side,
+  // SPEC.md §17) filled in when the text itself has none. Without this, a
+  // guessed key shows correctly wherever something reads song.rawKey
+  // directly (the song list's own key tag, above) but not here: a guessed
+  // key is only ever written into the crate's own musicalKey, never into
+  // the text itself unless/until a human writes it back to the file
+  // (key_review_action.js) — so a fresh ChordProSong parse of that
+  // unchanged text has no {key:} to find, and everything downstream that
+  // depends on parsedSong.key (populateCapoSelect's own capo-shape labels,
+  // Transposer's own key-aware chord math) silently has nothing to work
+  // with until that write-back happens. Every call site that constructs a
+  // ChordProSong for rendering/printing uses this instead of `new
+  // ChordProSong(song.text)` directly, so none of them can drift out of
+  // sync with what the song list already shows.
+  function parseSongForRender(song) {
+    const parsedSong = new ChordProSong(song.text);
+    if (!parsedSong.key && song.rawKey) parsedSong.key = song.rawKey;
+    return parsedSong;
+  }
+
   // composer/performer/subtitle/key: read via asArray()[0], same defensive
   // habit as `name` just below — chordpro_crate.js itself only ever writes
   // these as plain strings (SPEC.md §7), but nothing here can assume the
@@ -505,6 +527,7 @@ export function initSongbookApp(document, window) {
   const backButton = document.getElementById("back-to-list-button");
   const keySelect = document.getElementById("key-select");
   const capoSelect = document.getElementById("capo-select");
+  const songKeyStatic = document.getElementById("song-key-static");
   const instrumentSelect = document.getElementById("instrument-select");
   const chordDiagramsPanel = document.getElementById("chord-diagrams");
   const toggleChordsButton = document.getElementById("toggle-chords-button");
@@ -672,10 +695,23 @@ export function initSongbookApp(document, window) {
   // construction that could drift from what the chords themselves show.
   function populateKeySelect(parsedSong, soundingKey) {
     if (!parsedSong.hasChords) {
+      // No chords means nothing to transpose — the dropdown itself would
+      // offer a choice that does nothing — but a key can still be worth
+      // showing: some charts (a reading/lyrics-only page, say) carry a
+      // {key:} purely as a reminder for the performer, not because there's
+      // anything here to transpose. Static text, not a dropdown, in
+      // #song-key-static; #key-select itself stays hidden either way.
       setHidden(keySelect, true);
       keySelect.replaceChildren();
+      if (parsedSong.key) {
+        songKeyStatic.textContent = `Key: ${parsedSong.key}`;
+        setHidden(songKeyStatic, false);
+      } else {
+        setHidden(songKeyStatic, true);
+      }
       return;
     }
+    setHidden(songKeyStatic, true);
     setHidden(keySelect, false);
     keySelect.replaceChildren();
 
@@ -827,9 +863,9 @@ export function initSongbookApp(document, window) {
 
   function renderCurrentSong() {
     const song = songs[currentSongIndex];
-    // ChordProSong/renderSong: bare globals from CHORDPROBOOK_BROWSER_BUNDLE
-    // (see this function's own header comment above).
-    const parsedSong = new ChordProSong(song.text);
+    // parseSongForRender, not a bare `new ChordProSong(song.text)` — its own
+    // header comment above explains why.
+    const parsedSong = parseSongForRender(song);
     const rendered = renderSong(parsedSong, song.text, { transpose: currentTranspose, capo: currentCapo });
 
     songPagesElement.innerHTML = rendered.pages.join("\n");
@@ -967,6 +1003,10 @@ export function initSongbookApp(document, window) {
     let visibleSiblings = 0;
     if (!isHidden(keySelect)) { reservedWidth += keySelect.offsetWidth; visibleSiblings += 1; }
     if (!isHidden(capoSelect)) { reservedWidth += capoSelect.offsetWidth; visibleSiblings += 1; }
+    // #song-key-static and #key-select are never visible at the same time
+    // (populateKeySelect's own branch), so this never double-reserves for
+    // the same "key" slot — just whichever of the two is actually showing.
+    if (!isHidden(songKeyStatic)) { reservedWidth += songKeyStatic.offsetWidth; visibleSiblings += 1; }
     reservedWidth += gapPx * visibleSiblings; // one gap per sibling, between it and whatever precedes it
     const availableWidth = Math.max(0, songHeader.clientWidth - reservedWidth);
     // Measured on titleMeasurer (an off-flow clone — see its own
@@ -1427,9 +1467,9 @@ export function initSongbookApp(document, window) {
     setHidden(floorSheetLabel, true);
     setHidden(floorSheetNotesLabel, true);
     setHidden(printInstrumentSelect, false);
-    // ChordProSong/renderSong: bare globals from CHORDPROBOOK_BROWSER_BUNDLE
-    // (see this function's own header comment above).
-    const parsedSong = new ChordProSong(song.text);
+    // parseSongForRender, not a bare `new ChordProSong(song.text)` — see
+    // that function's own header comment.
+    const parsedSong = parseSongForRender(song);
     const rendered = renderSong(parsedSong, song.text, { transpose: currentTranspose, capo: currentCapo });
     // No page numbers either way — a standalone single-song print has no
     // book/contents page for one to refer back to (buildSongPrintPage's own
@@ -1570,7 +1610,7 @@ export function initSongbookApp(document, window) {
     const songPages = [];
     const fitJobs = [];
     const tocEntries = songs.map((song) => {
-      const parsedSong = new ChordProSong(song.text);
+      const parsedSong = parseSongForRender(song);
       // Each song in its own key/capo, not whatever is currently selected
       // on screen (SPEC.md §11) — that selection belongs to viewing one
       // song, not to a whole-book print a reader didn't make that choice
@@ -1731,7 +1771,7 @@ export function initSongbookApp(document, window) {
     const tocEntries = setlist.entries.map((entry) => {
       if (entry.songIndex < 0) return { name: entry.name, pageNumber: null };
       const song = songs[entry.songIndex];
-      const parsedSong = new ChordProSong(song.text);
+      const parsedSong = parseSongForRender(song);
       const rendered = renderSong(parsedSong, song.text, { transpose: entry.transpose, capo: entry.capo });
       const sectionCount = rendered.pages.length || 1;
       const pageCount = large ? sectionCount * 2 : sectionCount;
@@ -3211,7 +3251,7 @@ a.setlist-entry-name:hover { text-decoration: underline; }
 </section>
 
 <section id="song-view" class="hidden">
-<div id="song-content"><div id="song-header"><span id="song-view-title" class="hidden"></span><select id="key-select" class="hidden" aria-label="Key"></select><select id="capo-select" class="hidden" aria-label="Capo"></select></div><div id="song-pages"></div></div>
+<div id="song-content"><div id="song-header"><span id="song-view-title" class="hidden"></span><span id="song-key-static" class="hidden"></span><select id="key-select" class="hidden" aria-label="Key"></select><select id="capo-select" class="hidden" aria-label="Capo"></select></div><div id="song-pages"></div></div>
 <div id="chord-diagrams" class="hidden"></div>
 </section>
 

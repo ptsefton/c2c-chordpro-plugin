@@ -783,6 +783,7 @@ function threeWayAmbiguousTree() {
   assert.equal(item.keyStatus, "guessed");
   assert.equal(item.currentKey, guessKey(new ChordProSong(text).chordsUsed)[0].key);
   assert.ok(Array.isArray(item.candidates) && item.candidates.length);
+  assert.deepEqual(item.chordsUsed, ["C", "F", "G"]);
 }
 
 /* ---------- insertKeyDirective (SPEC.md §17) ---------- */
